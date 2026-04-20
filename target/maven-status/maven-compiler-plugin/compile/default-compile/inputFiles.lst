@@ -2,7 +2,13 @@ C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\co
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\config\FederationProperties.java
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\controller\FederationController.java
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\controller\InfoController.java
+C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\controller\IssueController.java
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\controller\VerifyController.java
+C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\demo\DemoEvent.java
+C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\demo\DemoEventType.java
+C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\demo\DemoRunner.java
+C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\demo\DemoStreamController.java
+C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\demo\LiveTracker.java
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\FederationDemoApplication.java
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\service\EntityStore.java
 C:\Users\Piete\FederatieTestOmgeving\src\main\java\com\example\federationdemo\service\StatementBuilder.java

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenID Federation Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #58a6ff, #79c0ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    color: #8b949e;
+    font-size: 0.9rem;
+  }
+  .base-url {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 12px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #79c0ff;
+  }
+
+  /* Federation diagram */
+  .diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 24px auto 32px;
+    max-width: 700px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .node {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .node.leaf   { border-color: #388bfd; }
+  .node.inter  { border-color: #d29922; }
+  .node.anchor { border-color: #3fb950; }
+  .node-icon { font-size: 1.5rem; margin-bottom: 4px; }
+  .node-title { font-size: 0.75rem; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: .05em; }
+  .node-name  { font-size: 0.9rem; font-weight: 600; margin-top: 2px; }
+  .node.leaf   .node-name { color: #79c0ff; }
+  .node.inter  .node-name { color: #e3b341; }
+  .node.anchor .node-name { color: #56d364; }
+  .arrow {
+    font-size: 1.4rem;
+    color: #484f58;
+    padding: 0 4px;
+  }
+
+  /* Start button */
+  .controls {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: #238636;
+    color: #fff;
+  }
+  .btn-primary:hover { background: #2ea043; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+  }
+  .btn-secondary:hover { background: #30363d; }
+
+  /* Scenario container */
+  #scenarios { }
+
+  .scenario-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    animation: slideIn 0.35s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .scenario-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #1c2128;
+    border-bottom: 1px solid #30363d;
+    cursor: pointer;
+    user-select: none;
+  }
+  .scenario-badge {
+    background: #388bfd22;
+    color: #79c0ff;
+    border: 1px solid #388bfd44;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    white-space: nowrap;
+  }
+  .scenario-title { font-weight: 600; font-size: 1rem; flex: 1; }
+  .scenario-status { font-size: 1.1rem; }
+  .scenario-desc { font-size: 0.82rem; color: #8b949e; padding: 8px 18px 10px; border-bottom: 1px solid #21262d; }
+  .scenario-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  /* HTTP call row */
+  .http-call {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 7px;
+    padding: 10px 14px;
+    font-family: monospace;
+    font-size: 0.82rem;
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .http-method { color: #79c0ff; font-weight: 700; flex-shrink: 0; }
+  .http-url { color: #e6edf3; word-break: break-all; flex: 1; }
+  .http-status { flex-shrink: 0; font-weight: 700; border-radius: 4px; padding: 1px 7px; }
+  .status-ok   { background: #12261e; color: #56d364; border: 1px solid #238636; }
+  .status-err  { background: #2d1212; color: #f85149; border: 1px solid #da3633; }
+  .status-warn { background: #271d0c; color: #e3b341; border: 1px solid #9e6a03; }
+  .http-details { margin-top: 8px; color: #8b949e; font-size: 0.78rem; display: flex; flex-wrap: wrap; gap: 8px; }
+  .claim-tag {
+    background: #1c2128;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+  .claim-label { color: #79c0ff; }
+  .claim-value { color: #e6edf3; }
+  .http-error { color: #f85149; margin-top: 6px; font-size: 0.8rem; word-break: break-all; }
+
+  /* Log row */
+  .log-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #1c2128;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #8b949e;
+    animation: fadeIn 0.25s ease;
+  }
+  .log-icon { color: #388bfd; flex-shrink: 0; }
+
+  /* Result row */
+  .result-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+    margin-top: 4px;
+  }
+  .result-ok   { background: #12261e; border: 1px solid #238636; }
+  .result-fail { background: #2d1212; border: 1px solid #da3633; }
+  .result-icon { font-size: 1.6rem; flex-shrink: 0; line-height: 1; }
+  .result-content {}
+  .result-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+  .result-ok   .result-title { color: #56d364; }
+  .result-fail .result-title { color: #f85149; }
+  .result-desc { font-size: 0.83rem; color: #8b949e; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    max-width: 860px;
+    margin: 0 auto 20px;
+    border-bottom: 1px solid #30363d;
+    padding-bottom: 0;
+  }
+  .tab-btn {
+    padding: 8px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #8b949e;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: #e6edf3; }
+  .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Live panel */
+  .live-panel {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .live-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .live-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #8b949e;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #484f58;
+    transition: background 0.3s;
+  }
+  .live-dot.active { background: #3fb950; animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  #liveLog {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 200px;
+    max-height: 600px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 0.82rem;
+  }
+  .live-placeholder {
+    color: #484f58;
+    text-align: center;
+    padding: 40px;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* Summary */
+  .summary-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 16px;
+    animation: slideIn 0.4s ease;
+  }
+  .summary-card h2 { font-size: 1.3rem; margin-bottom: 16px; }
+  .summary-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 20px; }
+  .stat { text-align: center; }
+  .stat-number { font-size: 2.5rem; font-weight: 700; line-height: 1; }
+  .stat-ok   .stat-number { color: #56d364; }
+  .stat-fail .stat-number { color: #f85149; }
+  .stat-label { font-size: 0.85rem; color: #8b949e; margin-top: 4px; }
+
+  /* Authority hints */
+  .hints { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .hint-tag {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 0.75rem;
+    color: #e3b341;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔐 OpenID Federation Demo</h1>
+  <p class="subtitle">Live visualisatie van trust chain opbouw</p>
+  <div class="base-url" id="baseUrlDisplay">laden...</div>
+</div>
+
+<div class="diagram">
+  <div class="node leaf">
+    <div class="node-icon">🏫</div>
+    <div class="node-title">Leaf</div>
+    <div class="node-name">Hogeschool Utrecht</div>
+  </div>
+  <div class="arrow">──►</div>
+  <div class="node inter">
+    <div class="node-icon">🔗</div>
+    <div class="node-title">Intermediate</div>
+    <div class="node-name">Surf</div>
+  </div>
+  <div class="arrow">──►</div>
+  <div class="node anchor">
+    <div class="node-icon">⚓</div>
+    <div class="node-title">Trust Anchor</div>
+    <div class="node-name">Nederlandse Overheid</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-primary" id="startBtn" onclick="startDemo()">▶ Start Demo</button>
+  <button class="btn btn-secondary" id="restartBtn" onclick="restartDemo()" style="display:none; margin-left:12px;">↺ Opnieuw starten</button>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('demo')">▶ Demo scenario's</button>
+  <button class="tab-btn" onclick="switchTab('live')">📡 Live inkomende calls</button>
+</div>
+
+<div id="tab-demo" class="tab-pane active">
+  <div id="scenarios" style="max-width:860px;margin:0 auto;"></div>
+</div>
+
+<div id="tab-live" class="tab-pane">
+  <div class="live-panel">
+    <div class="live-header">
+      <div class="live-status">
+        <div class="live-dot" id="liveDot"></div>
+        <span id="liveStatusText">Verbinden...</span>
+      </div>
+      <button class="btn btn-secondary" onclick="clearLive()" style="padding:6px 14px;font-size:0.82rem;">Wissen</button>
+    </div>
+    <div id="liveLog">
+      <div class="live-placeholder" id="livePlaceholder">
+        Wachten op inkomende federation calls...<br>
+        <small>Laat je wallet de leaf aanroepen om hier live te zien wat er binnenkomt.</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let es = null;
+  let liveEs = null;
+  let currentScenario = null;
+  let baseUrl = '';
+
+  // Tab switching
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', ['demo','live'][i] === name);
+    });
+    document.getElementById('tab-demo').classList.toggle('active', name === 'demo');
+    document.getElementById('tab-live').classList.toggle('active', name === 'live');
+    if (name === 'live' && !liveEs) startLiveStream();
+  }
+
+  // Live stream
+  function startLiveStream() {
+    liveEs = new EventSource('/demo/live-stream');
+    const dot = document.getElementById('liveDot');
+    const txt = document.getElementById('liveStatusText');
+    dot.classList.add('active');
+    txt.textContent = 'Verbonden — wachten op calls';
+
+    ['HTTP_CALL', 'LOG'].forEach(eventName => {
+      liveEs.addEventListener(eventName, e => {
+        const d = JSON.parse(e.data);
+        appendLive(d);
+      });
+    });
+
+    liveEs.onerror = () => {
+      dot.classList.remove('active');
+      txt.textContent = 'Verbinding verbroken';
+    };
+  }
+
+  function appendLive(d) {
+    const log = document.getElementById('liveLog');
+    const placeholder = document.getElementById('livePlaceholder');
+    if (placeholder) placeholder.remove();
+
+    const html = d.type === 'LOG' ? renderLog(d) : renderHttpCall(d);
+    const ts = new Date().toLocaleTimeString('nl-NL');
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'animation:fadeIn .2s ease';
+    wrapper.innerHTML = `<div style="color:#484f58;font-size:.72rem;margin-bottom:2px;">${ts}</div>${html}`;
+    log.appendChild(wrapper);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function clearLive() {
+    const log = document.getElementById('liveLog');
+    log.innerHTML = '<div class="live-placeholder" id="livePlaceholder">Wachten op inkomende federation calls...<br><small>Laat je wallet de leaf aanroepen om hier live te zien wat er binnenkomt.</small></div>';
+  }
+
+  // Fetch base URL from /info
+  fetch('/info').then(r => r.json()).then(d => {
+    baseUrl = d.endpoints?.anchor_config?.replace('/anchor/.well-known/openid-federation', '') || window.location.origin;
+    document.getElementById('baseUrlDisplay').textContent = baseUrl;
+  }).catch(() => {
+    baseUrl = window.location.origin;
+    document.getElementById('baseUrlDisplay').textContent = baseUrl;
+  });
+
+  function startDemo() {
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('restartBtn').style.display = 'none';
+    document.getElementById('scenarios').innerHTML = '';
+    currentScenario = null;
+
+    es = new EventSource('/demo/stream');
+
+    es.addEventListener('SCENARIO_START', e => {
+      const d = JSON.parse(e.data);
+      currentScenario = createScenarioCard(d);
+    });
+
+    es.addEventListener('HTTP_CALL', e => {
+      const d = JSON.parse(e.data);
+      appendToScenario(renderHttpCall(d));
+    });
+
+    es.addEventListener('LOG', e => {
+      const d = JSON.parse(e.data);
+      appendToScenario(renderLog(d));
+    });
+
+    es.addEventListener('SCENARIO_RESULT', e => {
+      const d = JSON.parse(e.data);
+      appendToScenario(renderResult(d));
+      finalizeScenario(d.geslaagd);
+    });
+
+    es.addEventListener('SUMMARY', e => {
+      const d = JSON.parse(e.data);
+      renderSummary(d);
+      es.close();
+      document.getElementById('restartBtn').style.display = 'inline-flex';
+    });
+
+    es.addEventListener('DONE', () => {
+      es.close();
+      document.getElementById('restartBtn').style.display = 'inline-flex';
+    });
+
+    es.onerror = () => {
+      es.close();
+      document.getElementById('startBtn').disabled = false;
+    };
+  }
+
+  function restartDemo() {
+    if (es) es.close();
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('restartBtn').style.display = 'none';
+    document.getElementById('scenarios').innerHTML = '';
+    startDemo();
+  }
+
+  function createScenarioCard(d) {
+    const card = document.createElement('div');
+    card.className = 'scenario-card';
+    card.id = 'scenario-' + d.scenarioNummer;
+    card.innerHTML = `
+      <div class="scenario-header" onclick="toggleScenario(${d.scenarioNummer})">
+        <span class="scenario-badge">Scenario ${d.scenarioNummer}</span>
+        <span class="scenario-title">${esc(d.scenarioTitel)}</span>
+        <span class="scenario-status" id="status-${d.scenarioNummer}">⏳</span>
+      </div>
+      <div class="scenario-desc">${esc(d.scenarioBeschrijving)}</div>
+      <div class="scenario-body" id="body-${d.scenarioNummer}"></div>
+    `;
+    document.getElementById('scenarios').appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return d.scenarioNummer;
+  }
+
+  function appendToScenario(html) {
+    if (currentScenario === null) return;
+    const body = document.getElementById('body-' + currentScenario);
+    if (!body) return;
+    body.insertAdjacentHTML('beforeend', html);
+    body.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function finalizeScenario(geslaagd) {
+    if (currentScenario === null) return;
+    const status = document.getElementById('status-' + currentScenario);
+    if (status) status.textContent = geslaagd ? '✅' : '❌';
+  }
+
+  function toggleScenario(nr) {
+    const body = document.getElementById('body-' + nr);
+    const desc = body?.previousElementSibling;
+    if (body) body.style.display = body.style.display === 'none' ? '' : '';
+  }
+
+  function renderHttpCall(d) {
+    const statusClass = d.statusCode >= 200 && d.statusCode < 300 ? 'status-ok'
+                      : d.statusCode === 0 ? 'status-warn' : 'status-err';
+    const statusLabel = d.statusCode === 0 ? 'ERR' : d.statusCode;
+    const shortUrl = d.url.replace(baseUrl, '');
+
+    let details = '';
+    if (d.issField) details += claimTag('iss', shorten(d.issField));
+    if (d.subField && d.subField !== d.issField) details += claimTag('sub', shorten(d.subField));
+    if (d.expField) details += claimTag('exp', d.expField);
+    if (d.authorityHints?.length) {
+      details += '<div class="hints">' +
+        d.authorityHints.map(h => `<span class="hint-tag">↑ ${shorten(h)}</span>`).join('') +
+        '</div>';
+    }
+
+    const errorHtml = d.errorMessage
+      ? `<div class="http-error">⚠ ${esc(d.errorMessage)}</div>` : '';
+
+    return `<div class="http-call">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${details||errorHtml?'8':'0'}px">
+          <span class="http-method">GET</span>
+          <span class="http-url" title="${esc(d.url)}">${esc(shortUrl || d.url)}</span>
+          <span class="http-status ${statusClass}">${statusLabel}</span>
+        </div>
+        ${details ? `<div class="http-details">${details}</div>` : ''}
+        ${errorHtml}
+      </div>
+    </div>`;
+  }
+
+  function renderLog(d) {
+    return `<div class="log-row"><span class="log-icon">ℹ</span><span>${esc(d.toelichting)}</span></div>`;
+  }
+
+  function renderResult(d) {
+    const cls = d.geslaagd ? 'result-ok' : 'result-fail';
+    const icon = d.geslaagd ? '✅' : '❌';
+    return `<div class="result-row ${cls}">
+      <div class="result-icon">${icon}</div>
+      <div class="result-content">
+        <div class="result-title">${esc(d.resultaat)}</div>
+        <div class="result-desc">${esc(d.toelichting)}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderSummary(d) {
+    const el = document.createElement('div');
+    el.className = 'summary-card';
+    el.innerHTML = `
+      <h2>Demo afgerond</h2>
+      <div class="summary-stats">
+        <div class="stat stat-ok">
+          <div class="stat-number">${d.aantalGeslaagd}</div>
+          <div class="stat-label">Geslaagd</div>
+        </div>
+        <div class="stat stat-fail">
+          <div class="stat-number">${d.aantalMislukt}</div>
+          <div class="stat-label">Mislukt (verwacht)</div>
+        </div>
+      </div>
+      <p style="color:#8b949e;font-size:.85rem">Scenario 1 toont de correcte werking. Scenario's 2–4 simuleren foutcases die een verifier correct moet afwijzen.</p>
+    `;
+    document.getElementById('scenarios').appendChild(el);
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function claimTag(label, value) {
+    return `<span class="claim-tag"><span class="claim-label">${label}: </span><span class="claim-value">${esc(value)}</span></span>`;
+  }
+
+  function shorten(url) {
+    if (!url) return url;
+    return url.replace(baseUrl, '…') || url;
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

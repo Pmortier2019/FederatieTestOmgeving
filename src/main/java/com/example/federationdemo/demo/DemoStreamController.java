@@ -21,10 +21,13 @@ public class DemoStreamController {
 
     private final DemoRunner demoRunner;
     private final ObjectMapper objectMapper;
+    private final LiveTracker liveTracker;
 
-    public DemoStreamController(DemoRunner demoRunner, ObjectMapper objectMapper) {
+    public DemoStreamController(DemoRunner demoRunner, ObjectMapper objectMapper,
+                                LiveTracker liveTracker) {
         this.demoRunner = demoRunner;
         this.objectMapper = objectMapper;
+        this.liveTracker = liveTracker;
     }
 
     @GetMapping("/demo")
@@ -62,5 +65,10 @@ public class DemoStreamController {
         });
 
         return emitter;
+    }
+
+    @GetMapping(value = "/demo/live-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter liveStream() {
+        return liveTracker.register();
     }
 }

@@ -109,7 +109,7 @@
   .btn-secondary:hover { background: #30363d; }
 
   /* Scenario container */
-  #scenarios { max-width: 860px; margin: 0 auto; }
+  #scenarios { }
 
   .scenario-card {
     background: #161b22;
@@ -212,6 +212,82 @@
   .result-fail .result-title { color: #f85149; }
   .result-desc { font-size: 0.83rem; color: #8b949e; }
 
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    max-width: 860px;
+    margin: 0 auto 20px;
+    border-bottom: 1px solid #30363d;
+    padding-bottom: 0;
+  }
+  .tab-btn {
+    padding: 8px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #8b949e;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: #e6edf3; }
+  .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Live panel */
+  .live-panel {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .live-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .live-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #8b949e;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #484f58;
+    transition: background 0.3s;
+  }
+  .live-dot.active { background: #3fb950; animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  #liveLog {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 200px;
+    max-height: 600px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 0.82rem;
+  }
+  .live-placeholder {
+    color: #484f58;
+    text-align: center;
+    padding: 40px;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
   /* Summary */
   .summary-card {
     background: #161b22;
@@ -275,12 +351,88 @@
   <button class="btn btn-secondary" id="restartBtn" onclick="restartDemo()" style="display:none; margin-left:12px;">↺ Opnieuw starten</button>
 </div>
 
-<div id="scenarios"></div>
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('demo')">▶ Demo scenario's</button>
+  <button class="tab-btn" onclick="switchTab('live')">📡 Live inkomende calls</button>
+</div>
+
+<div id="tab-demo" class="tab-pane active">
+  <div id="scenarios" style="max-width:860px;margin:0 auto;"></div>
+</div>
+
+<div id="tab-live" class="tab-pane">
+  <div class="live-panel">
+    <div class="live-header">
+      <div class="live-status">
+        <div class="live-dot" id="liveDot"></div>
+        <span id="liveStatusText">Verbinden...</span>
+      </div>
+      <button class="btn btn-secondary" onclick="clearLive()" style="padding:6px 14px;font-size:0.82rem;">Wissen</button>
+    </div>
+    <div id="liveLog">
+      <div class="live-placeholder" id="livePlaceholder">
+        Wachten op inkomende federation calls...<br>
+        <small>Laat je wallet de leaf aanroepen om hier live te zien wat er binnenkomt.</small>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   let es = null;
+  let liveEs = null;
   let currentScenario = null;
   let baseUrl = '';
+
+  // Tab switching
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', ['demo','live'][i] === name);
+    });
+    document.getElementById('tab-demo').classList.toggle('active', name === 'demo');
+    document.getElementById('tab-live').classList.toggle('active', name === 'live');
+    if (name === 'live' && !liveEs) startLiveStream();
+  }
+
+  // Live stream
+  function startLiveStream() {
+    liveEs = new EventSource('/demo/live-stream');
+    const dot = document.getElementById('liveDot');
+    const txt = document.getElementById('liveStatusText');
+    dot.classList.add('active');
+    txt.textContent = 'Verbonden — wachten op calls';
+
+    ['HTTP_CALL', 'LOG'].forEach(eventName => {
+      liveEs.addEventListener(eventName, e => {
+        const d = JSON.parse(e.data);
+        appendLive(d);
+      });
+    });
+
+    liveEs.onerror = () => {
+      dot.classList.remove('active');
+      txt.textContent = 'Verbinding verbroken';
+    };
+  }
+
+  function appendLive(d) {
+    const log = document.getElementById('liveLog');
+    const placeholder = document.getElementById('livePlaceholder');
+    if (placeholder) placeholder.remove();
+
+    const html = d.type === 'LOG' ? renderLog(d) : renderHttpCall(d);
+    const ts = new Date().toLocaleTimeString('nl-NL');
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'animation:fadeIn .2s ease';
+    wrapper.innerHTML = `<div style="color:#484f58;font-size:.72rem;margin-bottom:2px;">${ts}</div>${html}`;
+    log.appendChild(wrapper);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function clearLive() {
+    const log = document.getElementById('liveLog');
+    log.innerHTML = '<div class="live-placeholder" id="livePlaceholder">Wachten op inkomende federation calls...<br><small>Laat je wallet de leaf aanroepen om hier live te zien wat er binnenkomt.</small></div>';
+  }
 
   // Fetch base URL from /info
   fetch('/info').then(r => r.json()).then(d => {
