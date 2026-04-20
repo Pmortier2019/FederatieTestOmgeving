@@ -97,8 +97,7 @@ public class FederationConfig {
                 "openid_credential_issuer", Map.of(
                         "credential_issuer", baseUrl + "/leaf",
                         "token_endpoint_auth_method", "private_key_jwt"),
-                "vc_issuer", Map.of("jwks", Map.of(
-                        "keys", List.of(Map.of("kty", "EC", "kid", "diploma-key-1"))))));
+                "vc_issuer", Map.of("jwks", leafJwks)));
         store.putEntityConfig("leaf", builder.sign(leafClaims, leafKey));
 
         // Anchor subordinate statement about intermediate
