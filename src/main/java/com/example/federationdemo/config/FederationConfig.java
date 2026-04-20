@@ -123,7 +123,7 @@ public class FederationConfig {
         intermediateAboutLeaf.put("metadata", Map.of(
                 "federation_entity", Map.of(),
                 "openid_credential_issuer", Map.of(),
-                "vc_issuer", Map.of()));
+                "vc_issuer", Map.of("jwks", leafJwks)));
         store.putSubordinateStatement(
                 baseUrl + "/intermediate",
                 baseUrl + "/leaf",
