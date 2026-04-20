@@ -59,7 +59,7 @@ public class IssueController {
                     .build();
 
             JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256)
-                    .type(new JOSEObjectType("credential+jwt"))
+                    .type(new JOSEObjectType("JWT"))
                     .keyID(leafKey.getKeyID())
                     .build();
 
