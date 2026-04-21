@@ -76,6 +76,30 @@ body {
   padding: 3px 10px;
   margin-left: 4px;
 }
+.hdr-wallet {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 360px;
+}
+.hdr-wallet label {
+  font-size: .62rem;
+  color: var(--text-dim);
+  font-family: 'Fira Code', monospace;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hdr-wallet input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--cyan);
+  font-family: 'Fira Code', monospace;
+  font-size: .65rem;
+  padding: 4px 8px;
+  outline: none;
+}
 .hdr-spacer { flex: 1; }
 .hdr-legend {
   display: flex;
@@ -482,6 +506,60 @@ body {
 .btn-copy-jwt:hover { color: var(--cyan); }
 .btn-copy-jwt:disabled { opacity: .4; cursor: not-allowed; }
 
+.wallet-result {
+  display: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+.wallet-result.visible { display: block; }
+.wallet-result.valid { border-color: var(--green); background: var(--pass-bg); }
+.wallet-result.invalid { border-color: var(--red); background: var(--fail-bg); }
+.wallet-title {
+  font-size: .78rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.wallet-result.valid .wallet-title { color: var(--green); }
+.wallet-result.invalid .wallet-title { color: var(--red); }
+.policy-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.policy-card {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 7px 8px;
+  background: var(--surface);
+}
+.policy-card.ok { border-color: #10b98155; }
+.policy-card.fail { border-color: #ef444455; }
+.policy-name {
+  font-family: 'Fira Code', monospace;
+  font-size: .64rem;
+  font-weight: 700;
+}
+.policy-card.ok .policy-name { color: var(--green); }
+.policy-card.fail .policy-name { color: var(--red); }
+.policy-desc {
+  color: var(--text-mid);
+  font-size: .68rem;
+  line-height: 1.35;
+  margin-top: 4px;
+}
+.wallet-raw {
+  margin-top: 8px;
+  color: var(--text-mid);
+  font-family: 'Fira Code', monospace;
+  font-size: .6rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow: auto;
+}
+
 .sp-empty {
   flex: 1;
   display: flex;
@@ -551,6 +629,10 @@ body {
     <div class="hdr-sub">Live OpenID Federation endpoint verificatie</div>
   </div>
   <div class="hdr-base" id="baseUrlDisplay">laden…</div>
+  <div class="hdr-wallet">
+    <label for="walletBackendUrl">Wallet verify</label>
+    <input id="walletBackendUrl" value="http://localhost:8088/api/v2/credential/raw/verify">
+  </div>
   <div class="hdr-spacer"></div>
   <div class="hdr-legend">
     <span><span class="leg-dot" style="background:var(--amber)"></span>Trust Anchor</span>
@@ -831,6 +913,8 @@ body {
 <script>
 let baseUrl = '';
 let selectedSlug = null;
+const nodeCredentials = {}; // slug -> latest issued credential JWT
+const walletUrlStorageKey = 'walletBackendVerifyUrl';
 const nodeResults   = {};  // slug → true|false|undefined
 const nodeScenario  = {};  // slug → full scenario run result object
 
@@ -1251,6 +1335,10 @@ function refreshPanel(slug) {
           <div class="jwt-meta" id="jwt-meta-${slug}"></div>
           <button class="btn-copy-jwt" id="jwt-copy-${slug}" onclick="copyJwt('${slug}')" disabled>📋 Kopieer JWT</button>
         </div>
+        <button class="btn-get-jwt" id="wallet-btn-${slug}" onclick="verifyWithWalletBackend('${slug}')" style="margin-top:8px;">
+          Verify via wallet backend
+        </button>
+        <div class="wallet-result" id="wallet-result-${slug}" style="margin-top:8px;"></div>
       </div>
       ${anchorBlock}`;
   }
@@ -1300,6 +1388,7 @@ async function fetchJwt(slug) {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
+    nodeCredentials[slug] = d.credentialJwt;
     ta.value = d.credentialJwt;
     meta.innerHTML = `<span>iss: <b>${esc(d.issuer)}</b></span><span>kid: <b>${esc(d.kid)}</b></span><span>geldig 1 uur</span>`;
     box.classList.add('visible');
@@ -1322,6 +1411,93 @@ function copyJwt(slug) {
     const orig = btn.textContent;
     btn.textContent = '✓ Gekopieerd!';
     setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+async function verifyWithWalletBackend(slug) {
+  const btn = document.getElementById('wallet-btn-' + slug);
+  const result = document.getElementById('wallet-result-' + slug);
+  const endpoint = document.getElementById('walletBackendUrl').value.trim();
+  const anchorPath = ANCHOR_FOR[slug] || '/anchor';
+  const trustAnchor = baseUrl + anchorPath;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span style="opacity:.6">Wallet backend...</span>';
+  result.className = 'wallet-result visible';
+  result.innerHTML = '<div class="wallet-title">Wallet backend wordt aangeroepen...</div>';
+
+  try {
+    let token = nodeCredentials[slug] || document.getElementById('jwt-ta-' + slug)?.value;
+    if (!token) {
+      await fetchJwt(slug);
+      token = nodeCredentials[slug] || document.getElementById('jwt-ta-' + slug)?.value;
+    }
+    if (!token) throw new Error('Geen credential JWT beschikbaar');
+
+    const payload = {
+      credential_token: token,
+      trust_anchor_entity_id: trustAnchor
+    };
+
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' van wallet backend');
+
+    const data = await r.json();
+    renderWalletResult(slug, data, payload);
+  } catch (e) {
+    result.className = 'wallet-result visible invalid';
+    result.innerHTML = `
+      <div class="wallet-title">Wallet backend kon niet verifieren</div>
+      <div class="policy-desc">Controleer of je backend draait op <code>${esc(endpoint)}</code> en CORS toestaat voor deze pagina.</div>
+      <pre class="wallet-raw">${esc(e.message)}</pre>
+    `;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Verify via wallet backend';
+  }
+}
+
+function renderWalletResult(slug, data, payload) {
+  const result = document.getElementById('wallet-result-' + slug);
+  const status = data.credential_verify_status || (data.valid ? 'VALID' : 'INVALID');
+  const valid = status === 'VALID' || status === true;
+  const policies = data.credential_verify_policy_results || [];
+  const policyHtml = policies.length
+    ? `<div class="policy-grid">${policies.map(p => `
+        <div class="policy-card ${p.valid ? 'ok' : 'fail'}">
+          <div class="policy-name">${p.valid ? 'OK' : 'FAIL'} ${esc(p.policyName || 'policy')}</div>
+          <div class="policy-desc">${esc(p.policyDescription || '')}</div>
+        </div>
+      `).join('')}</div>`
+    : '<div class="policy-desc">Geen policy-resultaten ontvangen.</div>';
+
+  result.className = 'wallet-result visible ' + (valid ? 'valid' : 'invalid');
+  result.innerHTML = `
+    <div class="wallet-title">Wallet backend: ${esc(String(status))}</div>
+    <div class="policy-desc" style="margin-bottom:8px">Input trust anchor: <code>${esc(payload.trust_anchor_entity_id)}</code></div>
+    ${policyHtml}
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;color:var(--text-mid);font-size:.7rem">Input naar wallet backend</summary>
+      <pre class="wallet-raw">${esc(JSON.stringify(payload, null, 2))}</pre>
+    </details>
+    <details style="margin-top:8px">
+      <summary style="cursor:pointer;color:var(--text-mid);font-size:.7rem">Raw response</summary>
+      <pre class="wallet-raw">${esc(JSON.stringify(data, null, 2))}</pre>
+    </details>
+  `;
+}
+
+function initWalletBackendUrl() {
+  const input = document.getElementById('walletBackendUrl');
+  if (!input) return;
+  const saved = localStorage.getItem(walletUrlStorageKey);
+  if (saved) input.value = saved;
+  input.addEventListener('change', () => {
+    localStorage.setItem(walletUrlStorageKey, input.value.trim());
   });
 }
 
@@ -1394,6 +1570,7 @@ function updateEndpoints() {
 
 // ── Init ──
 window.addEventListener('load', () => {
+  initWalletBackendUrl();
   fetch('/info').then(r => r.json()).then(d => {
     baseUrl = d.endpoints?.anchor_config?.replace('/anchor/.well-known/openid-federation','') || window.location.origin;
     document.getElementById('baseUrlDisplay').textContent = baseUrl;
