@@ -337,6 +337,51 @@
     display: flex;
     gap: 12px;
   }
+  .scenario-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .scenario-chip {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 999px;
+    color: #8b949e;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .scenario-chip.policy { border-color: #9e6a03; color: #e3b341; }
+  .scenario-chip.authority { border-color: #388bfd; color: #79c0ff; }
+  .scenario-chip.integrity { border-color: #da3633; color: #f85149; }
+  .scenario-chip.valid { border-color: #238636; color: #56d364; }
+  .verify-result {
+    display: none;
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+  .verify-result.visible { display: block; }
+  .verify-result.pass {
+    background: #12261e;
+    border: 1px solid #238636;
+    color: #56d364;
+  }
+  .verify-result.fail {
+    background: #2d1212;
+    border: 1px solid #da3633;
+    color: #f85149;
+  }
+  .verify-result code {
+    color: inherit;
+    background: rgba(0,0,0,.25);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
   .spinner {
     display: inline-block;
     width: 14px; height: 14px;
@@ -525,6 +570,7 @@
   let liveEs = null;
   let currentScenario = null;
   let baseUrl = '';
+  const scenarioJwts = new Map();
 
   // ── Testscenario's ──────────────────────────────────────────────────────────
 
@@ -532,6 +578,7 @@
     // ── Geldige chains ──────────────────────────────────────────────────────
     {
       id: 1,
+      category: "valid",
       title: "Geldig pad — Hogeschool Utrecht",
       valid: true,
       issuer: "leaf",
@@ -545,6 +592,7 @@
     },
     {
       id: 2,
+      category: "valid",
       title: "Geldig pad — Hogeschool Amsterdam",
       valid: true,
       issuer: "leaf2",
@@ -559,6 +607,7 @@
     // ── Chain resolution fouten ─────────────────────────────────────────────
     {
       id: 3,
+      category: "integrity",
       title: "Rogue issuer — niet in de federatie",
       valid: false,
       issuer: "rogue",
@@ -572,6 +621,7 @@
     },
     {
       id: 4,
+      category: "integrity",
       title: "Verlopen subordinate statement",
       valid: false,
       issuer: "leaf-expired",
@@ -586,6 +636,7 @@
     // ── Sleutelfouten ───────────────────────────────────────────────────────
     {
       id: 5,
+      category: "integrity",
       title: "Verkeerde sleutel in subordinate statement",
       valid: false,
       issuer: "leaf-wrongkey",
@@ -600,6 +651,7 @@
     // ── Authority hints ─────────────────────────────────────────────────────
     {
       id: 9,
+      category: "authority",
       title: "Twee authority hints — één kapot, één geldig",
       valid: true,
       issuer: "leaf-multihint",
@@ -614,6 +666,7 @@
     },
     {
       id: 10,
+      category: "authority",
       title: "Twee authority hints — beide ongeldig",
       valid: false,
       issuer: "leaf-nohint",
@@ -627,6 +680,7 @@
     },
     {
       id: 11,
+      category: "authority",
       title: "Geldig credential — verkeerd trust anchor opgegeven",
       valid: false,
       issuer: "leaf",
@@ -642,6 +696,7 @@
     // ── Claim-integriteitsfouten ─────────────────────────────────────────────
     {
       id: 12,
+      category: "integrity",
       title: "Sub-claim in subordinate statement klopt niet",
       valid: false,
       issuer: "leaf-subwrong",
@@ -656,6 +711,7 @@
     // ── Toekomstig: metadata_policy ─────────────────────────────────────────
     {
       id: 6,
+      category: "policy",
       title: "Metadata policy — niet-toegestaan credential type",
       valid: false,
       issuer: "leaf-policy-type",
@@ -669,6 +725,7 @@
     },
     {
       id: 7,
+      category: "policy",
       title: "Metadata policy — JWKS overschreven door intermediate",
       valid: false,
       issuer: "leaf-policy-jwks",
@@ -682,6 +739,7 @@
     },
     {
       id: 8,
+      category: "policy",
       title: "Metadata policy — onbekende kritische operator",
       valid: false,
       issuer: "leaf-policy-crit",
@@ -696,6 +754,7 @@
     // ── Toekomstig: chain-diepte & constraints ──────────────────────────────
     {
       id: 13,
+      category: "integrity",
       title: "Chain te diep (depth > MAX)",
       valid: false,
       issuer: "leaf-deep",
@@ -711,6 +770,7 @@
     },
     {
       id: 14,
+      category: "integrity",
       title: "Constraints — max_path_length overschreden",
       valid: false,
       issuer: "leaf-maxpath",
@@ -727,13 +787,14 @@
   function buildTestCards() {
     const grid = document.getElementById('testGrid');
     grid.innerHTML = '';
-    TEST_SCENARIOS.forEach(s => {
+    [...TEST_SCENARIOS].sort((a, b) => a.id - b.id).forEach(s => {
       const chainHtml = s.chain.map((node, i) => {
         const arrow = i < s.chain.length - 1 ? '<span class="chain-arrow">──►</span>' : '';
         return `<span class="chain-node cn-${node.type}">${esc(node.label)}</span>${arrow}`;
       }).join('');
 
       const badgeClass = s.valid ? 'badge-valid' : 'badge-invalid';
+      const categoryLabel = categoryText(s.category);
       const badgeText  = s.valid ? '✅ Verwacht: geldig' : '❌ Verwacht: ongeldig';
 
       grid.insertAdjacentHTML('beforeend', `
@@ -743,6 +804,11 @@
             <span class="test-title">${esc(s.title)}</span>
           </div>
           <div class="test-body">
+            <div class="scenario-meta-row">
+              <span class="scenario-chip ${esc(s.category || '')}">${esc(categoryLabel)}</span>
+              <span class="scenario-chip">Issuer: ${esc(s.issuer)}</span>
+              <span class="scenario-chip">Type: ${esc(s.credentialType)}</span>
+            </div>
             <div class="test-desc">${esc(s.desc)}</div>
             <div class="test-chain">${chainHtml}</div>
             <div class="test-anchor-row">
@@ -757,25 +823,44 @@
               <button class="btn-copy-small" id="copy-btn-${s.id}" onclick="copyJwt(${s.id})" disabled>
                 📋 Kopieer JWT
               </button>
+              <button class="btn-copy-small" id="verify-btn-${s.id}" onclick="verifyScenario(${s.id})">
+                Controleer verwachting
+              </button>
             </div>
             <div class="jwt-box" id="jwt-box-${s.id}">
               <textarea id="jwt-ta-${s.id}" readonly rows="3"></textarea>
               <div class="jwt-meta" id="jwt-meta-${s.id}"></div>
             </div>
+            <div class="verify-result" id="verify-result-${s.id}"></div>
           </div>
         </div>
       `);
     });
   }
 
+  function categoryText(category) {
+    switch (category) {
+      case 'valid': return 'Referentie';
+      case 'policy': return 'Metadata policy';
+      case 'authority': return 'Authority hints';
+      case 'integrity': return 'Chain integriteit';
+      default: return 'Scenario';
+    }
+  }
+
+  function scenarioAnchor(s) {
+    if (!baseUrl) return 'laden...';
+    return baseUrl + (s.anchorPath || '/anchor');
+  }
+
   function updateAnchors() {
     TEST_SCENARIOS.forEach(s => {
       const el = document.getElementById('anchor-' + s.id);
-      if (el) el.textContent = baseUrl ? baseUrl + '/anchor' : 'laden...';
+      if (el) el.textContent = scenarioAnchor(s);
     });
   }
 
-  async function fetchTestJwt(scenarioId) {
+  async function fetchTestJwt(scenarioId, throwOnError = false) {
     const scenario = TEST_SCENARIOS.find(s => s.id === scenarioId);
     if (!scenario) return;
 
@@ -803,6 +888,7 @@
 
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
+      scenarioJwts.set(scenarioId, data.credentialJwt);
 
       ta.value = data.credentialJwt;
       meta.innerHTML = `
@@ -812,13 +898,68 @@
       `;
       box.classList.add('visible');
       copyBtn.disabled = false;
+      return data.credentialJwt;
     } catch (e) {
       ta.value = 'Fout: ' + e.message;
       meta.innerHTML = '';
       box.classList.add('visible');
+      if (throwOnError) throw e;
+      return null;
     } finally {
       btn.disabled = false;
       btn.innerHTML = '🔄 Haal verse JWT op';
+    }
+  }
+
+  async function verifyScenario(scenarioId) {
+    const scenario = TEST_SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+
+    const btn = document.getElementById('verify-btn-' + scenarioId);
+    const result = document.getElementById('verify-result-' + scenarioId);
+    const anchor = scenarioAnchor(scenario);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Controleren...';
+    result.className = 'verify-result visible';
+    result.textContent = 'Credential ophalen en /verify aanroepen...';
+
+    try {
+      let jwt = scenarioJwts.get(scenarioId);
+      if (!jwt) {
+        jwt = await fetchTestJwt(scenarioId, true);
+      }
+
+      const resp = await fetch('/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issuerIdentifier: baseUrl + '/' + scenario.issuer,
+          trustAnchorEntityId: anchor,
+          credentialJwt: jwt
+        })
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      const actualTrusted = Boolean(data.trusted);
+      const expectationMet = actualTrusted === Boolean(scenario.valid);
+
+      result.className = 'verify-result visible ' + (expectationMet ? 'pass' : 'fail');
+      if (expectationMet) {
+        result.innerHTML = scenario.valid
+          ? `PASS: /verify accepteerde dit scenario zoals verwacht. Anchor: <code>${esc(anchor)}</code>`
+          : `PASS: /verify wees dit scenario af zoals verwacht. Fout: <code>${esc(data.error || 'afgewezen')}</code>`;
+      } else {
+        result.innerHTML = scenario.valid
+          ? `FAIL: dit scenario had geldig moeten zijn, maar /verify wees het af. Fout: <code>${esc(data.error || 'onbekend')}</code>`
+          : `FAIL: dit scenario had ongeldig moeten zijn, maar /verify accepteerde het. Controleer fixture of validator.`;
+      }
+    } catch (e) {
+      result.className = 'verify-result visible fail';
+      result.innerHTML = `FAIL: scenario kon niet gecontroleerd worden. Fout: <code>${esc(e.message)}</code>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Controleer verwachting';
     }
   }
 
