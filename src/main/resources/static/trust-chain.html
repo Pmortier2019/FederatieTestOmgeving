@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trust Chain Topology — Live Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060c18;
+  --surface:   #0c1525;
+  --surface2:  #111d32;
+  --border:    #1b2b45;
+  --border2:   #243652;
+  --text:      #d8e4f5;
+  --text-dim:  #4a6480;
+  --text-mid:  #7a9bbf;
+  --blue:      #3b82f6;
+  --cyan:      #22d3ee;
+  --amber:     #f59e0b;
+  --green:     #10b981;
+  --red:       #ef4444;
+  --purple:    #a855f7;
+  --pass-bg:   #052012;
+  --pass-brd:  #10b981;
+  --fail-bg:   #1a0808;
+  --fail-brd:  #ef4444;
+  --pend-brd:  #1b2b45;
+  --node-w:    168px;
+  --node-h:    88px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Barlow Condensed', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Header ── */
+.hdr {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+  z-index: 100;
+}
+.hdr-logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cyan);
+  white-space: nowrap;
+}
+.hdr-sub {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-family: 'Fira Code', monospace;
+}
+.hdr-base {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--cyan);
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 3px 10px;
+  margin-left: 4px;
+}
+.hdr-spacer { flex: 1; }
+.hdr-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 0.75rem;
+  color: var(--text-mid);
+}
+.leg-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.btn-run {
+  padding: 7px 18px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  white-space: nowrap;
+}
+.btn-run:hover { background: #2563eb; }
+.btn-run:active { transform: scale(.97); }
+.btn-run.running { background: var(--amber); color: #000; }
+
+/* ── Layout ── */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Diagram ── */
+.diagram-wrap {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  padding: 40px 40px 60px;
+}
+.diagram-canvas {
+  position: relative;
+  min-width: 900px;
+}
+
+/* SVG connector overlay */
+#connSvg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+#connSvg line, #connSvg path {
+  stroke: var(--border2);
+  stroke-width: 1.5;
+  fill: none;
+  transition: stroke .4s;
+}
+#connSvg line.pass, #connSvg path.pass { stroke: #10b98166; }
+#connSvg line.fail, #connSvg path.fail { stroke: #ef444455; }
+
+/* ── Rows ── */
+.row {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  position: relative;
+  z-index: 2;
+}
+.row + .row { margin-top: 56px; }
+
+/* ── Node card ── */
+.node {
+  width: var(--node-w);
+  min-height: var(--node-h);
+  background: var(--surface);
+  border: 1.5px solid var(--pend-brd);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color .35s, box-shadow .35s, background .35s;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.node:hover {
+  border-color: var(--border2);
+  box-shadow: 0 0 0 1px var(--border2);
+}
+.node.selected {
+  box-shadow: 0 0 0 2px var(--cyan);
+  border-color: var(--cyan);
+}
+.node.pass {
+  background: var(--pass-bg);
+  border-color: var(--pass-brd);
+  box-shadow: 0 0 12px #10b98122;
+}
+.node.fail {
+  background: var(--fail-bg);
+  border-color: var(--fail-brd);
+  box-shadow: 0 0 12px #ef444422;
+}
+.node.checking {
+  border-color: var(--amber);
+  animation: pulse-border 1s ease-in-out infinite;
+}
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 #f59e0b33; }
+  50%       { box-shadow: 0 0 0 4px #f59e0b11; }
+}
+
+/* Role accent bar */
+.node::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 8px 0 0 8px;
+  background: var(--border2);
+  transition: background .35s;
+}
+.node.role-anchor::before  { background: var(--amber); }
+.node.role-inter::before   { background: var(--blue); }
+.node.role-leaf::before    { background: var(--cyan); }
+.node.role-bad::before     { background: var(--red); }
+.node.pass::before         { background: var(--green); }
+.node.fail::before         { background: var(--red); }
+
+.node-role {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-dim);
+}
+.node.role-anchor .node-role { color: var(--amber); }
+.node.role-inter  .node-role { color: var(--blue); }
+.node.role-leaf   .node-role { color: var(--cyan); }
+.node.role-bad    .node-role { color: var(--red); }
+
+.node-abbr {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.node-name {
+  font-size: 0.72rem;
+  color: var(--text-mid);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-ep {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  transition: color .3s;
+}
+.node:hover .node-ep, .node.selected .node-ep { color: var(--text-mid); }
+
+.node-status-dot {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: background .35s, box-shadow .35s;
+}
+.node.pass .node-status-dot {
+  background: var(--green);
+  box-shadow: 0 0 5px var(--green);
+}
+.node.fail .node-status-dot {
+  background: var(--red);
+  box-shadow: 0 0 5px var(--red);
+}
+.node.checking .node-status-dot {
+  background: var(--amber);
+  animation: spin-dot 1s linear infinite;
+}
+@keyframes spin-dot {
+  from { box-shadow: 0 0 0 0 #f59e0b88; }
+  to   { box-shadow: 0 0 8px 2px #f59e0b00; }
+}
+
+/* ── Badge for scenario numbers ── */
+.node-badge {
+  position: absolute;
+  bottom: 6px; right: 6px;
+  font-size: 0.58rem;
+  font-family: 'Fira Code', monospace;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* ── Side panel ── */
+.side-panel {
+  width: 380px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sp-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.sp-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.sp-role {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.sp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sp-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.sp-url-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: var(--cyan);
+  word-break: break-all;
+  line-height: 1.6;
+  position: relative;
+}
+.sp-url-box .url-label {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: 2px;
+  font-family: 'Barlow Condensed', sans-serif;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.sp-url-box .copy-btn {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-mid);
+  font-size: 0.6rem;
+  font-family: 'Fira Code', monospace;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.sp-url-box .copy-btn:hover { color: var(--cyan); background: var(--border); }
+
+.sp-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+.sp-status-row.pass { background: var(--pass-bg); border-color: var(--pass-brd); color: var(--green); }
+.sp-status-row.fail { background: var(--fail-bg); border-color: var(--fail-brd); color: var(--red); }
+.sp-status-row.pending { color: var(--text-dim); }
+
+.check-result {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  color: var(--text-mid);
+  max-height: 120px;
+  overflow-y: auto;
+}
+.check-result .cr-row {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.65rem;
+}
+.cr-ok { color: var(--green); }
+.cr-fail { color: var(--red); }
+.cr-warn { color: var(--amber); }
+.cr-dim  { color: var(--text-dim); }
+
+.sp-divider { border: none; border-top: 1px solid var(--border); }
+
+/* JWT section */
+.btn-get-jwt {
+  width: 100%;
+  padding: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: var(--cyan);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-get-jwt:hover { background: var(--border); border-color: var(--cyan); }
+.btn-get-jwt:disabled { color: var(--text-dim); cursor: not-allowed; border-color: var(--border); }
+
+.jwt-output {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  display: none;
+}
+.jwt-output.visible { display: block; }
+.jwt-ta {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--cyan);
+  font-family: 'Fira Code', monospace;
+  font-size: 0.62rem;
+  resize: vertical;
+  min-height: 64px;
+  outline: none;
+  line-break: anywhere;
+}
+.jwt-meta {
+  margin-top: 6px;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: 'Fira Code', monospace;
+}
+.btn-copy-jwt {
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-mid);
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 600;
+  transition: color .15s;
+}
+.btn-copy-jwt:hover { color: var(--cyan); }
+.btn-copy-jwt:disabled { opacity: .4; cursor: not-allowed; }
+
+.sp-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  padding: 40px;
+  text-align: center;
+}
+.sp-empty-icon { font-size: 2rem; opacity: .3; }
+
+/* ── Rogue / standalone node group ── */
+.rogue-group {
+  position: relative;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px 12px 8px;
+  margin-top: 20px;
+}
+.rogue-group-label {
+  position: absolute;
+  top: -9px; left: 12px;
+  background: var(--bg);
+  padding: 0 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-dim);
+}
+
+/* Scroll bar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2e4268; }
+
+/* ── Tooltip ── */
+.tooltip {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity .15s;
+  max-width: 260px;
+  font-family: 'Fira Code', monospace;
+  line-height: 1.5;
+}
+.tooltip.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="hdr">
+  <div>
+    <div class="hdr-logo">⛓ Trust Chain Topology</div>
+    <div class="hdr-sub">Live OpenID Federation endpoint verificatie</div>
+  </div>
+  <div class="hdr-base" id="baseUrlDisplay">laden…</div>
+  <div class="hdr-spacer"></div>
+  <div class="hdr-legend">
+    <span><span class="leg-dot" style="background:var(--amber)"></span>Trust Anchor</span>
+    <span><span class="leg-dot" style="background:var(--blue)"></span>Intermediate</span>
+    <span><span class="leg-dot" style="background:var(--cyan)"></span>Leaf (OP/RP/AS)</span>
+    <span><span class="leg-dot" style="background:var(--green)"></span>Geslaagd</span>
+    <span><span class="leg-dot" style="background:var(--red)"></span>Mislukt</span>
+  </div>
+  <button class="btn-run" id="btnRun" onclick="runAll()">▶ Controleer alles</button>
+</header>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Diagram -->
+  <div class="diagram-wrap" id="diagramWrap">
+    <div class="diagram-canvas" id="diagramCanvas">
+      <svg id="connSvg"></svg>
+
+      <!-- Row 0: Trust Anchor -->
+      <div class="row" id="row0">
+        <div class="node role-anchor" id="node-anchor"
+             data-slug="anchor" data-name="Nederlandse Overheid" data-role="Trust Anchor" data-abbr="TA"
+             onclick="selectNode('anchor')" onmouseenter="showTip(event,'anchor')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Trust Anchor</div>
+          <div class="node-abbr">TA</div>
+          <div class="node-name">Nederlandse Overheid</div>
+          <div class="node-ep" id="ep-anchor">/anchor/.well-known/openid-federation</div>
+        </div>
+      </div>
+
+      <!-- Row 1: Intermediates -->
+      <div class="row" id="row1">
+        <div class="node role-inter" id="node-intermediate"
+             data-slug="intermediate" data-name="Surf" data-role="Intermediate" data-abbr="INT"
+             onclick="selectNode('intermediate')" onmouseenter="showTip(event,'intermediate')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Intermediate</div>
+          <div class="node-abbr">INT</div>
+          <div class="node-name">Surf</div>
+          <div class="node-ep" id="ep-intermediate">/intermediate/.well-known/openid-federation</div>
+        </div>
+        <div class="node role-inter" id="node-intermediate2"
+             data-slug="intermediate2" data-name="HBO-raad" data-role="Intermediate" data-abbr="INT"
+             onclick="selectNode('intermediate2')" onmouseenter="showTip(event,'intermediate2')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Intermediate</div>
+          <div class="node-abbr">INT</div>
+          <div class="node-name">HBO-raad</div>
+          <div class="node-ep" id="ep-intermediate2">/intermediate2/.well-known/openid-federation</div>
+        </div>
+      </div>
+
+      <!-- Row 2: Main leaves -->
+      <div class="row" id="row2">
+        <div class="node role-leaf" id="node-leaf"
+             data-slug="leaf" data-name="Hogeschool Utrecht" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="true" data-scenario="1"
+             onclick="selectNode('leaf')" onmouseenter="showTip(event,'leaf')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Hogeschool Utrecht</div>
+          <div class="node-ep" id="ep-leaf">/leaf/.well-known/openid-federation</div>
+          <div class="node-badge">S1</div>
+        </div>
+        <div class="node role-leaf" id="node-leaf-expired"
+             data-slug="leaf-expired" data-name="Verlopen Instelling" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="false" data-scenario="4"
+             onclick="selectNode('leaf-expired')" onmouseenter="showTip(event,'leaf-expired')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Verlopen Instelling</div>
+          <div class="node-ep" id="ep-leaf-expired">/leaf-expired/.well-known/openid-federation</div>
+          <div class="node-badge">S4</div>
+        </div>
+        <div class="node role-leaf" id="node-leaf-wrongkey"
+             data-slug="leaf-wrongkey" data-name="Verkeerde Sleutel" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="false" data-scenario="5"
+             onclick="selectNode('leaf-wrongkey')" onmouseenter="showTip(event,'leaf-wrongkey')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Verkeerde Sleutel</div>
+          <div class="node-ep" id="ep-leaf-wrongkey">/leaf-wrongkey/.well-known/openid-federation</div>
+          <div class="node-badge">S5</div>
+        </div>
+        <div class="node role-leaf" id="node-leaf-subwrong"
+             data-slug="leaf-subwrong" data-name="Verkeerde Sub" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="false" data-scenario="12"
+             onclick="selectNode('leaf-subwrong')" onmouseenter="showTip(event,'leaf-subwrong')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Verkeerde Sub</div>
+          <div class="node-ep" id="ep-leaf-subwrong">/leaf-subwrong/.well-known/openid-federation</div>
+          <div class="node-badge">S12</div>
+        </div>
+        <div class="node role-leaf" id="node-leaf-multihint"
+             data-slug="leaf-multihint" data-name="Meervoudige Hint" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="true" data-scenario="9"
+             onclick="selectNode('leaf-multihint')" onmouseenter="showTip(event,'leaf-multihint')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Meervoudige Hint</div>
+          <div class="node-ep" id="ep-leaf-multihint">/leaf-multihint/.well-known/openid-federation</div>
+          <div class="node-badge">S9</div>
+        </div>
+        <div class="node role-bad" id="node-leaf-nohint"
+             data-slug="leaf-nohint" data-name="Geen Geldige Hint" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="false" data-scenario="10"
+             onclick="selectNode('leaf-nohint')" onmouseenter="showTip(event,'leaf-nohint')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Geen Geldige Hint</div>
+          <div class="node-ep" id="ep-leaf-nohint">/leaf-nohint/.well-known/openid-federation</div>
+          <div class="node-badge">S10</div>
+        </div>
+        <div class="node role-leaf" id="node-leaf2"
+             data-slug="leaf2" data-name="Hogeschool Amsterdam" data-role="OP / Leaf" data-abbr="OP"
+             data-valid="true" data-scenario="2"
+             onclick="selectNode('leaf2')" onmouseenter="showTip(event,'leaf2')" onmouseleave="hideTip()">
+          <div class="node-status-dot"></div>
+          <div class="node-role">Leaf · OP</div>
+          <div class="node-abbr">OP</div>
+          <div class="node-name">Hogeschool Amsterdam</div>
+          <div class="node-ep" id="ep-leaf2">/leaf2/.well-known/openid-federation</div>
+          <div class="node-badge">S2</div>
+        </div>
+      </div>
+
+      <!-- Standalone / problem nodes -->
+      <div class="rogue-group" id="rogueGroup" style="margin-top:40px;">
+        <span class="rogue-group-label">Buiten federatie / speciale gevallen</span>
+        <div class="row" style="margin-top:0;justify-content:flex-start;flex-wrap:wrap;gap:14px;">
+          <div class="node role-bad" id="node-rogue"
+               data-slug="rogue" data-name="Onbekende Instelling" data-role="Rogue Leaf" data-abbr="OP"
+               data-valid="false" data-scenario="3"
+               onclick="selectNode('rogue')" onmouseenter="showTip(event,'rogue')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Rogue Leaf · OP</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Onbekende Instelling</div>
+            <div class="node-ep" id="ep-rogue">/rogue/.well-known/openid-federation</div>
+            <div class="node-badge">S3</div>
+          </div>
+          <div class="node role-leaf" id="node-leaf-policy-type"
+               data-slug="leaf-policy-type" data-name="Policy: Type beperkt" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="false" data-scenario="6"
+               onclick="selectNode('leaf-policy-type')" onmouseenter="showTip(event,'leaf-policy-type')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Policy</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Policy: Type beperkt</div>
+            <div class="node-ep" id="ep-leaf-policy-type">/leaf-policy-type/.well-known/openid-federation</div>
+            <div class="node-badge">S6</div>
+          </div>
+          <div class="node role-leaf" id="node-leaf-policy-jwks"
+               data-slug="leaf-policy-jwks" data-name="Policy: JWKS overschreven" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="false" data-scenario="7"
+               onclick="selectNode('leaf-policy-jwks')" onmouseenter="showTip(event,'leaf-policy-jwks')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Policy</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Policy: JWKS overschreven</div>
+            <div class="node-ep" id="ep-leaf-policy-jwks">/leaf-policy-jwks/.well-known/openid-federation</div>
+            <div class="node-badge">S7</div>
+          </div>
+          <div class="node role-bad" id="node-leaf-deep"
+               data-slug="leaf-deep" data-name="Te diepe keten" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="false" data-scenario="13"
+               onclick="selectNode('leaf-deep')" onmouseenter="showTip(event,'leaf-deep')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Diepte</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Te diepe keten</div>
+            <div class="node-ep" id="ep-leaf-deep">/leaf-deep/.well-known/openid-federation</div>
+            <div class="node-badge">S13</div>
+          </div>
+          <div class="node role-bad" id="node-leaf-maxpath"
+               data-slug="leaf-maxpath" data-name="Max path overschreden" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="false" data-scenario="14"
+               onclick="selectNode('leaf-maxpath')" onmouseenter="showTip(event,'leaf-maxpath')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Constraints</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Max path overschreden</div>
+            <div class="node-ep" id="ep-leaf-maxpath">/leaf-maxpath/.well-known/openid-federation</div>
+            <div class="node-badge">S14</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /diagram-canvas -->
+  </div><!-- /diagram-wrap -->
+
+  <!-- ── Side panel ── -->
+  <aside class="side-panel" id="sidePanel">
+    <div class="sp-empty" id="spEmpty">
+      <div class="sp-empty-icon">⛓</div>
+      <div>Selecteer een node om details te zien</div>
+      <div style="font-size:.72rem;color:var(--text-dim);margin-top:4px">Klik op een entiteit in het diagram</div>
+    </div>
+    <div id="spContent" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+      <div class="sp-header" id="spHeader">
+        <div class="sp-title" id="spTitle">—</div>
+        <div class="sp-role" id="spRole">—</div>
+      </div>
+      <div class="sp-body" id="spBody"></div>
+    </div>
+  </aside>
+
+</div><!-- /main -->
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let baseUrl = '';
+let selectedSlug = null;
+const nodeResults = {};
+
+// ── Parent relationships for subordinate statement endpoints ──
+const PARENTS = {
+  'anchor':           null,
+  'intermediate':     'anchor',
+  'intermediate2':    'anchor',
+  'leaf':             'intermediate',
+  'leaf2':            'intermediate2',
+  'leaf-expired':     'intermediate',
+  'leaf-wrongkey':    'intermediate',
+  'leaf-subwrong':    'intermediate',
+  'leaf-multihint':   'intermediate',
+  'leaf-nohint':      null,
+  'rogue':            null,
+  'leaf-policy-type': 'intermediate',
+  'leaf-policy-jwks': 'intermediate',
+  'leaf-deep':        'inter-depth-1',
+  'leaf-maxpath':     'intermediate-maxpath',
+};
+
+const SCENARIO_DESC = {
+  'leaf':             'Volledig geldig pad via Surf naar de Nederlandse Overheid.',
+  'leaf2':            'Tweede geldig pad via HBO-raad naar dezelfde trust anchor.',
+  'rogue':            'Issuer heeft geen subordinate statement bij de intermediate — niet in de federatie.',
+  'leaf-expired':     'Subordinate statement van Surf is verlopen (exp lag in het verleden).',
+  'leaf-wrongkey':    'Surf registreert een andere public key dan waarmee de leaf ondertekent.',
+  'leaf-subwrong':    'Sub-claim in subordinate statement komt niet overeen met de leaf entity-id.',
+  'leaf-multihint':   'Twee authority_hints: één 404, één geldig. Resolver vindt het geldige pad.',
+  'leaf-nohint':      'Beide authority_hints verwijzen naar niet-bestaande intermediates.',
+  'leaf-policy-type': 'Metadata policy beperkt credential_types_supported — DiplomaCertificate valt er uit.',
+  'leaf-policy-jwks': 'Policy value overschrijft vc_issuer.jwks met een andere sleutel.',
+  'leaf-deep':        'Chain via 6 intermediates — overschrijdt MAX_HOPS (5).',
+  'leaf-maxpath':     'Trust anchor stelt max_path_length=0 in, maar er zit een intermediate tussen.',
+};
+
+const CAN_ISSUE = new Set(['leaf','leaf2','rogue','leaf-expired','leaf-wrongkey','leaf-subwrong',
+  'leaf-multihint','leaf-nohint','leaf-policy-type','leaf-policy-jwks','leaf-deep','leaf-maxpath']);
+
+// ── Connections: [parent-slug, child-slug] ──
+const EDGES = [
+  ['anchor','intermediate'],
+  ['anchor','intermediate2'],
+  ['intermediate','leaf'],
+  ['intermediate','leaf-expired'],
+  ['intermediate','leaf-wrongkey'],
+  ['intermediate','leaf-subwrong'],
+  ['intermediate','leaf-multihint'],
+  ['intermediate','leaf-nohint'],
+  ['intermediate2','leaf2'],
+];
+
+// ── JWT helpers ──
+function decodePayload(jwt) {
+  try {
+    const part = jwt.split('.')[1];
+    return JSON.parse(atob(part.replace(/-/g,'+').replace(/_/g,'/')));
+  } catch { return null; }
+}
+function fmtExp(epoch) {
+  if (!epoch) return '?';
+  return new Date(epoch * 1000).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function isExpired(epoch) { return epoch && epoch < Math.floor(Date.now()/1000); }
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Fetch helpers ──
+async function fetchEntityConfig(slug) {
+  try {
+    const r = await fetch(`/${slug}/.well-known/openid-federation`);
+    if (!r.ok) return { ok: false, status: r.status };
+    const jwt = await r.text();
+    return { ok: true, jwt, payload: decodePayload(jwt) };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+async function fetchSubStatement(issuerSlug, subjectSlug) {
+  const subUrl = encodeURIComponent(baseUrl + '/' + subjectSlug);
+  try {
+    const r = await fetch(`/${issuerSlug}/fetch?sub=${subUrl}`);
+    if (!r.ok) return { ok: false, status: r.status };
+    const jwt = await r.text();
+    return { ok: true, jwt, payload: decodePayload(jwt) };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// ── Node status update ──
+function setNodeStatus(slug, status) { // 'checking' | 'pass' | 'fail' | 'reset'
+  const el = document.getElementById('node-' + slug);
+  if (!el) return;
+  el.classList.remove('checking','pass','fail');
+  if (status !== 'reset') el.classList.add(status);
+  updateEdgeColors();
+  if (selectedSlug === slug) refreshPanel(slug);
+}
+
+function updateEdgeColors() {
+  document.querySelectorAll('#connSvg line, #connSvg path').forEach(el => {
+    el.classList.remove('pass','fail');
+    const [a, b] = (el.dataset.edge || '').split('→');
+    if (!a || !b) return;
+    const aRes = nodeResults[a], bRes = nodeResults[b];
+    if (aRes === true && bRes === true) el.classList.add('pass');
+    else if (aRes === false || bRes === false) el.classList.add('fail');
+  });
+}
+
+// ── Check single node ──
+async function checkNode(slug) {
+  setNodeStatus(slug, 'checking');
+  const result = await fetchEntityConfig(slug);
+  nodeResults[slug] = result.ok;
+
+  let checks = [];
+  const p = result.payload;
+
+  if (!result.ok) {
+    checks.push({ type:'fail', text: `Entity config niet bereikbaar (HTTP ${result.status || result.error})` });
+    setNodeStatus(slug, 'fail');
+  } else {
+    checks.push({ type:'ok', text: `Entity config bereikbaar` });
+    const exp = p?.exp;
+    if (exp) {
+      if (isExpired(exp)) checks.push({ type:'fail', text: `Config verlopen: ${fmtExp(exp)}` });
+      else checks.push({ type:'ok', text: `Config geldig t/m ${fmtExp(exp)}` });
+    }
+    if (p?.iss) checks.push({ type:'ok', text: `iss: ${p.iss}` });
+    if (p?.authority_hints?.length) {
+      checks.push({ type:'warn', text: `authority_hints: ${p.authority_hints.length}x` });
+    }
+
+    // Check sub statement
+    const parentSlug = PARENTS[slug];
+    if (parentSlug) {
+      const subRes = await fetchSubStatement(parentSlug, slug);
+      if (!subRes.ok) {
+        checks.push({ type:'fail', text: `Subordinate stmt van ${parentSlug}: HTTP ${subRes.status || 404}` });
+        setNodeStatus(slug, 'fail');
+      } else {
+        checks.push({ type:'ok', text: `Subordinate stmt van ${parentSlug} aanwezig` });
+        const sp = subRes.payload;
+        if (sp?.exp) {
+          if (isExpired(sp.exp)) {
+            checks.push({ type:'fail', text: `Sub stmt verlopen: ${fmtExp(sp.exp)}` });
+            setNodeStatus(slug, 'fail');
+          } else {
+            checks.push({ type:'ok', text: `Sub stmt geldig t/m ${fmtExp(sp.exp)}` });
+            if (nodeResults[slug] !== false) setNodeStatus(slug, 'pass');
+          }
+        } else {
+          if (nodeResults[slug] !== false) setNodeStatus(slug, 'pass');
+        }
+      }
+    } else {
+      if (nodeResults[slug] !== false) setNodeStatus(slug, 'pass');
+    }
+  }
+
+  nodeResults[slug + '__checks'] = checks;
+  if (selectedSlug === slug) refreshPanel(slug);
+  return result;
+}
+
+// ── Run all ──
+async function runAll() {
+  const btn = document.getElementById('btnRun');
+  btn.textContent = '⏳ Bezig…';
+  btn.classList.add('running');
+  btn.disabled = true;
+
+  const allSlugs = Array.from(document.querySelectorAll('.node[data-slug]')).map(n => n.dataset.slug);
+  // Reset all
+  allSlugs.forEach(s => { setNodeStatus(s,'reset'); nodeResults[s] = undefined; });
+
+  // Check anchors first, then intermediates, then leaves
+  const order = ['anchor','intermediate','intermediate2',
+    'leaf','leaf2','leaf-expired','leaf-wrongkey','leaf-subwrong','leaf-multihint','leaf-nohint',
+    'rogue','leaf-policy-type','leaf-policy-jwks','leaf-deep','leaf-maxpath'];
+
+  for (const slug of order) {
+    if (allSlugs.includes(slug)) await checkNode(slug);
+  }
+
+  btn.textContent = '▶ Controleer alles';
+  btn.classList.remove('running');
+  btn.disabled = false;
+}
+
+// ── Select node / side panel ──
+function selectNode(slug) {
+  if (selectedSlug) {
+    const prev = document.getElementById('node-' + selectedSlug);
+    if (prev) prev.classList.remove('selected');
+  }
+  selectedSlug = slug;
+  const el = document.getElementById('node-' + slug);
+  if (el) el.classList.add('selected');
+  refreshPanel(slug);
+}
+
+function refreshPanel(slug) {
+  const el = document.getElementById('node-' + slug);
+  if (!el) return;
+  const name = el.dataset.name;
+  const role = el.dataset.role;
+  const checks = nodeResults[slug + '__checks'] || [];
+  const status = nodeResults[slug];
+  const expectedValid = el.dataset.valid;
+  const scenario = el.dataset.scenario;
+
+  document.getElementById('spEmpty').style.display = 'none';
+  const spContent = document.getElementById('spContent');
+  spContent.style.display = 'flex';
+
+  document.getElementById('spTitle').textContent = name;
+  document.getElementById('spRole').textContent = role + (scenario ? ` · Scenario ${scenario}` : '');
+
+  const ecUrl = baseUrl + `/${slug}/.well-known/openid-federation`;
+  const parentSlug = PARENTS[slug];
+  const fetchUrl = parentSlug ? `${baseUrl}/${parentSlug}/fetch?sub=${encodeURIComponent(baseUrl+'/'+slug)}` : null;
+
+  let statusHtml = '';
+  if (status === undefined) {
+    statusHtml = `<div class="sp-status-row pending">⏺ Nog niet gecontroleerd</div>`;
+  } else if (status === true) {
+    statusHtml = `<div class="sp-status-row pass">✓ Entity config bereikbaar</div>`;
+  } else {
+    statusHtml = `<div class="sp-status-row fail">✗ Verificatie mislukt</div>`;
+  }
+
+  let checksHtml = '';
+  if (checks.length) {
+    checksHtml = `<div>
+      <div class="sp-section-label">Controle resultaten</div>
+      <div class="check-result">
+        ${checks.map(c => `<div class="cr-row"><span class="cr-${c.type}">${c.type==='ok'?'✓':c.type==='fail'?'✗':'⚠'}</span><span class="cr-dim">${esc(c.text)}</span></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  let descHtml = '';
+  const desc = SCENARIO_DESC[slug];
+  if (desc) {
+    descHtml = `<div style="font-size:.78rem;color:var(--text-mid);line-height:1.6;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;">${esc(desc)}</div>`;
+  }
+
+  let expectedHtml = '';
+  if (expectedValid !== undefined) {
+    const v = expectedValid === 'true';
+    expectedHtml = `<div style="font-size:.72rem;color:${v?'var(--green)':'var(--red)'};font-weight:700;">
+      ${v ? '✅ Verwacht: geldig' : '❌ Verwacht: ongeldig'}
+    </div>`;
+  }
+
+  let copyBtnEc = `<button class="copy-btn" onclick="copyText('${ecUrl}', this)">kopieer</button>`;
+  let fetchSection = fetchUrl ? `
+    <div>
+      <div class="sp-section-label">Subordinate statement endpoint (van parent)</div>
+      <div class="sp-url-box">
+        <span class="url-label">/${parentSlug}/fetch?sub=…</span>
+        <span id="sp-fetch-url-${slug}">${esc(fetchUrl)}</span>
+        <button class="copy-btn" onclick="copyText(document.getElementById('sp-fetch-url-${slug}').textContent, this)">kopieer</button>
+      </div>
+    </div>` : '';
+
+  let jwtSection = '';
+  if (CAN_ISSUE.has(slug)) {
+    jwtSection = `
+      <hr class="sp-divider">
+      <div>
+        <div class="sp-section-label">Credential JWT ophalen</div>
+        <button class="btn-get-jwt" id="jwt-btn-${slug}" onclick="fetchJwt('${slug}')">
+          ⚡ Haal JWT op via /issue
+        </button>
+        <div class="jwt-output" id="jwt-box-${slug}" style="margin-top:8px;">
+          <textarea class="jwt-ta" id="jwt-ta-${slug}" readonly rows="3"></textarea>
+          <div class="jwt-meta" id="jwt-meta-${slug}"></div>
+          <button class="btn-copy-jwt" id="jwt-copy-${slug}" onclick="copyJwt('${slug}')" disabled>📋 Kopieer JWT</button>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('spBody').innerHTML = `
+    ${statusHtml}
+    ${expectedHtml}
+    ${descHtml}
+    ${checksHtml}
+    <hr class="sp-divider">
+    <div>
+      <div class="sp-section-label">Entity configuration endpoint</div>
+      <div class="sp-url-box">
+        <span class="url-label">GET /{slug}/.well-known/openid-federation</span>
+        <span id="sp-ec-url-${slug}">${esc(ecUrl)}</span>
+        ${copyBtnEc}
+      </div>
+    </div>
+    ${fetchSection}
+    <div>
+      <div class="sp-section-label">Fetch list endpoint (subordinates)</div>
+      <div class="sp-url-box">
+        <span class="url-label">GET /${slug}/list</span>
+        <span>${esc(baseUrl + '/' + slug + '/list')}</span>
+      </div>
+    </div>
+    ${jwtSection}
+  `;
+  // Re-attach check button
+}
+
+async function fetchJwt(slug) {
+  const btn = document.getElementById('jwt-btn-' + slug);
+  const box = document.getElementById('jwt-box-' + slug);
+  const ta  = document.getElementById('jwt-ta-' + slug);
+  const meta = document.getElementById('jwt-meta-' + slug);
+  const copy = document.getElementById('jwt-copy-' + slug);
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span style="opacity:.6">⏳ Ophalen…</span>';
+  try {
+    const r = await fetch('/issue', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ issuer: slug, credentialType:'DiplomaCertificate' })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    ta.value = d.credentialJwt;
+    meta.innerHTML = `<span>iss: <b>${esc(d.issuer)}</b></span><span>kid: <b>${esc(d.kid)}</b></span><span>geldig 1 uur</span>`;
+    box.classList.add('visible');
+    copy.disabled = false;
+  } catch(e) {
+    ta.value = 'Fout: ' + e.message;
+    meta.innerHTML = '';
+    box.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Haal JWT op via /issue';
+  }
+}
+
+function copyJwt(slug) {
+  const ta = document.getElementById('jwt-ta-' + slug);
+  if (!ta?.value) return;
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.getElementById('jwt-copy-' + slug);
+    const orig = btn.textContent;
+    btn.textContent = '✓ Gekopieerd!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+// ── Tooltip ──
+function showTip(e, slug) {
+  const el = document.getElementById('node-' + slug);
+  const desc = SCENARIO_DESC[slug];
+  if (!desc) return;
+  const tip = document.getElementById('tooltip');
+  tip.textContent = desc;
+  tip.classList.add('visible');
+  moveTip(e);
+}
+function hideTip() { document.getElementById('tooltip').classList.remove('visible'); }
+document.addEventListener('mousemove', (e) => {
+  const tip = document.getElementById('tooltip');
+  if (tip.classList.contains('visible')) moveTip(e);
+});
+function moveTip(e) {
+  const tip = document.getElementById('tooltip');
+  tip.style.left = (e.clientX + 14) + 'px';
+  tip.style.top  = (e.clientY + 14) + 'px';
+}
+
+// ── SVG connector lines ──
+function drawConnectors() {
+  const svg = document.getElementById('connSvg');
+  const canvas = document.getElementById('diagramCanvas');
+  svg.innerHTML = '';
+  const cr = canvas.getBoundingClientRect();
+
+  for (const [parentSlug, childSlug] of EDGES) {
+    const pEl = document.getElementById('node-' + parentSlug);
+    const cEl = document.getElementById('node-' + childSlug);
+    if (!pEl || !cEl) continue;
+    const pr = pEl.getBoundingClientRect();
+    const cr2 = cEl.getBoundingClientRect();
+
+    const x1 = pr.left + pr.width/2  - cr.left;
+    const y1 = pr.bottom             - cr.top;
+    const x2 = cr2.left + cr2.width/2 - cr.left;
+    const y2 = cr2.top               - cr.top;
+
+    const midY = (y1 + y2) / 2;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`);
+    path.dataset.edge = parentSlug + '→' + childSlug;
+    svg.appendChild(path);
+  }
+  updateEdgeColors();
+}
+
+// ── Endpoint URL updates ──
+function updateEndpoints() {
+  document.querySelectorAll('.node[data-slug]').forEach(el => {
+    const slug = el.dataset.slug;
+    const ep = el.querySelector('.node-ep');
+    if (ep) ep.textContent = `${baseUrl}/${slug}/.well-known/openid-federation`;
+  });
+}
+
+// ── Init ──
+window.addEventListener('load', () => {
+  fetch('/info').then(r => r.json()).then(d => {
+    baseUrl = d.endpoints?.anchor_config?.replace('/anchor/.well-known/openid-federation','') || window.location.origin;
+    document.getElementById('baseUrlDisplay').textContent = baseUrl;
+    updateEndpoints();
+    setTimeout(drawConnectors, 100);
+  }).catch(() => {
+    baseUrl = window.location.origin;
+    document.getElementById('baseUrlDisplay').textContent = baseUrl;
+    updateEndpoints();
+    setTimeout(drawConnectors, 100);
+  });
+});
+
+window.addEventListener('resize', () => { drawConnectors(); });
+</script>
+</body>
+</html>
