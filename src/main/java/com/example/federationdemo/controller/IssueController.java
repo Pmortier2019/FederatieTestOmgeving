@@ -32,18 +32,35 @@ public class IssueController {
         this.entityStore = entityStore;
     }
 
-    @Operation(summary = "Issue a signed credential JWT as the leaf entity",
-               description = "Returns a JWT signed with the leaf private key. " +
-                             "Use iss + kid to verify via the federation trust chain.")
+    @Operation(
+        summary = "Geef een gesigneerde credential JWT uit als leaf entity",
+        description = """
+            Geeft een JWT terug, gesigneerd door de opgegeven leaf.
+
+            **issuer opties:**
+            - `leaf` *(standaard)* — Hogeschool Utrecht, geldig pad via Surf → Overheid ✅
+            - `leaf2` — Hogeschool Amsterdam, geldig pad via HBO-raad → Overheid ✅
+            - `rogue` — Onbekende Instelling, niet opgenomen in de federatie ❌
+            - `leaf-expired` — Verlopen Instelling, subordinate statement is verlopen ❌
+            - `leaf-wrongkey` — Verkeerde Sleutel, chain klopt maar JWKS matcht niet met signatuur ❌
+            """
+    )
     @PostMapping(value = "/issue", consumes = "application/json", produces = "application/json")
     public IssueResponse issue(@RequestBody IssueRequest request) {
         try {
-            ECKey leafKey = entityStore.getEcKey("leaf");
-            long now = Instant.now().getEpochSecond();
+            String issuerName = request.issuer() != null ? request.issuer() : "leaf";
+            String issuerUrl  = baseUrl + "/" + issuerName;
 
+            ECKey signingKey = resolveSigningKey(issuerName);
+            if (signingKey == null) {
+                throw new IllegalArgumentException("Onbekende issuer: " + issuerName +
+                        ". Geldige waarden: leaf, leaf2, rogue, leaf-expired, leaf-wrongkey");
+            }
+
+            long now = Instant.now().getEpochSecond();
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                    .issuer(baseUrl + "/leaf")
-                    .subject(request.subject() != null ? request.subject() : "demo-subject")
+                    .issuer(issuerUrl)
+                    .subject(request.subject() != null ? request.subject() : "did:example:test")
                     .issueTime(Date.from(Instant.ofEpochSecond(now)))
                     .expirationTime(Date.from(Instant.ofEpochSecond(now + 3600)))
                     .claim("vc", Map.of(
@@ -52,7 +69,7 @@ public class IssueController {
                                             ? request.credentialType()
                                             : "DiplomaCertificate"},
                             "credentialSubject", Map.of(
-                                    "id", request.subject() != null ? request.subject() : "demo-subject",
+                                    "id", request.subject() != null ? request.subject() : "did:example:test",
                                     "achievement", request.achievement() != null
                                             ? request.achievement()
                                             : "Bachelor of Science")))
@@ -60,27 +77,44 @@ public class IssueController {
 
             JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256)
                     .type(new JOSEObjectType("JWT"))
-                    .keyID(leafKey.getKeyID())
+                    .keyID(signingKey.getKeyID())
                     .build();
 
             SignedJWT jwt = new SignedJWT(header, claims);
-            jwt.sign(new ECDSASigner(leafKey));
+            jwt.sign(new ECDSASigner(signingKey));
 
-            return new IssueResponse(jwt.serialize(), baseUrl + "/leaf", leafKey.getKeyID());
+            return new IssueResponse(jwt.serialize(), issuerUrl, signingKey.getKeyID(), issuerName);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to issue credential: " + e.getMessage(), e);
+            throw new RuntimeException("Credential uitgifte mislukt: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Geeft de juiste signing key terug op basis van de issuer naam.
+     * Let op: leaf-wrongkey gebruikt bewust een andere sleutel dan wat intermediate registreert.
+     */
+    private ECKey resolveSigningKey(String issuerName) {
+        return switch (issuerName) {
+            case "leaf"         -> entityStore.getEcKey("leaf");
+            case "leaf2"        -> entityStore.getEcKey("leaf2");
+            case "rogue"        -> entityStore.getEcKey("rogue");
+            case "leaf-expired" -> entityStore.getEcKey("leaf-expired");
+            case "leaf-wrongkey" -> entityStore.getEcKey("leaf-wrongkey-signing"); // bewust afwijkend
+            default             -> null;
+        };
     }
 
     public record IssueRequest(
             String subject,
             String credentialType,
-            String achievement
+            String achievement,
+            String issuer
     ) {}
 
     public record IssueResponse(
             String credentialJwt,
             String issuer,
-            String kid
+            String kid,
+            String scenario
     ) {}
 }

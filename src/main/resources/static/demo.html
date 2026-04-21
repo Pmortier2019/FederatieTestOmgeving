@@ -212,6 +212,143 @@
   .result-fail .result-title { color: #f85149; }
   .result-desc { font-size: 0.83rem; color: #8b949e; }
 
+  /* Scenario test cards */
+  .test-grid {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .test-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .test-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #1c2128;
+    border-bottom: 1px solid #30363d;
+  }
+  .test-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge-valid   { background: #12261e; color: #56d364; border: 1px solid #238636; }
+  .badge-invalid { background: #2d1212; color: #f85149; border: 1px solid #da3633; }
+  .test-title { font-weight: 600; font-size: 1rem; flex: 1; }
+  .test-expected { font-size: 1.1rem; }
+  .test-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .test-desc { font-size: 0.85rem; color: #8b949e; line-height: 1.55; }
+  .test-chain {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+  }
+  .chain-node {
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-weight: 600;
+  }
+  .cn-leaf   { background: #0d2341; color: #79c0ff; border: 1px solid #388bfd55; }
+  .cn-inter  { background: #2a1f00; color: #e3b341; border: 1px solid #9e6a0355; }
+  .cn-anchor { background: #0d2a14; color: #56d364; border: 1px solid #23863655; }
+  .cn-cross  { background: #2d1212; color: #f85149; border: 1px solid #da363355; }
+  .chain-arrow { color: #484f58; }
+  .test-anchor-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #8b949e;
+  }
+  .test-anchor-row code {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: #79c0ff;
+    font-size: 0.78rem;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .test-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-fetch {
+    padding: 8px 16px;
+    background: #238636;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-fetch:hover { background: #2ea043; }
+  .btn-fetch:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+  .btn-copy-small {
+    padding: 8px 14px;
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-copy-small:hover { background: #30363d; }
+  .btn-copy-small:disabled { color: #484f58; cursor: not-allowed; }
+  .jwt-box {
+    display: none;
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .jwt-box.visible { display: block; }
+  .jwt-box textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #79c0ff;
+    font-family: monospace;
+    font-size: 0.75rem;
+    resize: vertical;
+    min-height: 60px;
+    outline: none;
+    line-break: anywhere;
+  }
+  .jwt-meta {
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #484f58;
+    display: flex;
+    gap: 12px;
+  }
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* Tabs */
   .tabs {
     display: flex;
@@ -353,11 +490,16 @@
 
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('demo')">▶ Demo scenario's</button>
+  <button class="tab-btn" onclick="switchTab('test')">🧪 Testscenario's</button>
   <button class="tab-btn" onclick="switchTab('live')">📡 Live inkomende calls</button>
 </div>
 
 <div id="tab-demo" class="tab-pane active">
   <div id="scenarios" style="max-width:860px;margin:0 auto;"></div>
+</div>
+
+<div id="tab-test" class="tab-pane">
+  <div class="test-grid" id="testGrid"></div>
 </div>
 
 <div id="tab-live" class="tab-pane">
@@ -384,12 +526,201 @@
   let currentScenario = null;
   let baseUrl = '';
 
+  // ── Testscenario's ──────────────────────────────────────────────────────────
+
+  const TEST_SCENARIOS = [
+    {
+      id: 1,
+      title: "Geldig pad — Hogeschool Utrecht",
+      valid: true,
+      issuer: "leaf",
+      chain: [
+        { label: "Hogeschool Utrecht", type: "leaf" },
+        { label: "Surf", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "Volledige en geldige trust chain. De leaf is geregistreerd bij Surf, en Surf is geregistreerd bij de Nederlandse Overheid als trust anchor. Alle sleutels kloppen, alle subordinate statements zijn geldig.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 2,
+      title: "Geldig pad — Hogeschool Amsterdam",
+      valid: true,
+      issuer: "leaf2",
+      chain: [
+        { label: "Hogeschool Amsterdam", type: "leaf" },
+        { label: "HBO-raad", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "Een tweede geldig trust pad onder dezelfde trust anchor. Toont dat meerdere intermediates onafhankelijk van elkaar kunnen opereren binnen dezelfde federatie.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 3,
+      title: "Rogue issuer — niet in de federatie",
+      valid: false,
+      issuer: "rogue",
+      chain: [
+        { label: "Onbekende Instelling", type: "cross" },
+        { label: "Intermediate", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De issuer heeft een eigen entity configuration, maar geen enkele intermediate heeft een subordinate statement over hem gepubliceerd. De chain resolution mislukt: intermediate geeft 404 terug op het fetch endpoint.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 4,
+      title: "Verlopen subordinate statement",
+      valid: false,
+      issuer: "leaf-expired",
+      chain: [
+        { label: "Verlopen Instelling", type: "cross" },
+        { label: "Surf", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De issuer is ooit opgenomen in de federatie, maar het subordinate statement van Surf is verlopen (exp ligt 1 uur in het verleden). Bij chain resolution wordt dit statement opgehaald en direct afgewezen door de validator.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 5,
+      title: "Verkeerde sleutel in subordinate statement",
+      valid: false,
+      issuer: "leaf-wrongkey",
+      chain: [
+        { label: "Verkeerde Sleutel", type: "cross" },
+        { label: "Surf", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De trust chain is technisch geldig — intermediate heeft een subordinate statement gepubliceerd. Maar de vc_issuer.jwks in dat statement bevat een andere public key dan waarmee de credential daadwerkelijk is ondertekend. Signatuurverificatie faalt.",
+      credentialType: "DiplomaCertificate"
+    }
+  ];
+
+  function buildTestCards() {
+    const grid = document.getElementById('testGrid');
+    grid.innerHTML = '';
+    TEST_SCENARIOS.forEach(s => {
+      const chainHtml = s.chain.map((node, i) => {
+        const arrow = i < s.chain.length - 1 ? '<span class="chain-arrow">──►</span>' : '';
+        return `<span class="chain-node cn-${node.type}">${esc(node.label)}</span>${arrow}`;
+      }).join('');
+
+      const badgeClass = s.valid ? 'badge-valid' : 'badge-invalid';
+      const badgeText  = s.valid ? '✅ Verwacht: geldig' : '❌ Verwacht: ongeldig';
+
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="test-card">
+          <div class="test-card-header">
+            <span class="test-badge ${badgeClass}">${badgeText}</span>
+            <span class="test-title">${esc(s.title)}</span>
+          </div>
+          <div class="test-body">
+            <div class="test-desc">${esc(s.desc)}</div>
+            <div class="test-chain">${chainHtml}</div>
+            <div class="test-anchor-row">
+              <span>Trust Anchor:</span>
+              <code id="anchor-${s.id}">laden...</code>
+              <button class="btn-copy-small" onclick="copyAnchor(${s.id})">📋 Kopieer</button>
+            </div>
+            <div class="test-actions">
+              <button class="btn-fetch" id="fetch-btn-${s.id}" onclick="fetchTestJwt(${s.id})">
+                🔄 Haal verse JWT op
+              </button>
+              <button class="btn-copy-small" id="copy-btn-${s.id}" onclick="copyJwt(${s.id})" disabled>
+                📋 Kopieer JWT
+              </button>
+            </div>
+            <div class="jwt-box" id="jwt-box-${s.id}">
+              <textarea id="jwt-ta-${s.id}" readonly rows="3"></textarea>
+              <div class="jwt-meta" id="jwt-meta-${s.id}"></div>
+            </div>
+          </div>
+        </div>
+      `);
+    });
+  }
+
+  function updateAnchors() {
+    TEST_SCENARIOS.forEach(s => {
+      const el = document.getElementById('anchor-' + s.id);
+      if (el) el.textContent = baseUrl ? baseUrl + '/anchor' : 'laden...';
+    });
+  }
+
+  async function fetchTestJwt(scenarioId) {
+    const scenario = TEST_SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+
+    const btn = document.getElementById('fetch-btn-' + scenarioId);
+    const copyBtn = document.getElementById('copy-btn-' + scenarioId);
+    const box = document.getElementById('jwt-box-' + scenarioId);
+    const ta  = document.getElementById('jwt-ta-' + scenarioId);
+    const meta = document.getElementById('jwt-meta-' + scenarioId);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Ophalen...';
+    box.classList.remove('visible');
+
+    try {
+      const resp = await fetch('/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: 'did:example:test',
+          credentialType: scenario.credentialType,
+          achievement: 'Bachelor of Science',
+          issuer: scenario.issuer
+        })
+      });
+
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+
+      ta.value = data.credentialJwt;
+      meta.innerHTML = `
+        <span>iss: <b>${esc(data.issuer)}</b></span>
+        <span>kid: <b>${esc(data.kid)}</b></span>
+        <span>geldig 1 uur</span>
+      `;
+      box.classList.add('visible');
+      copyBtn.disabled = false;
+    } catch (e) {
+      ta.value = 'Fout: ' + e.message;
+      meta.innerHTML = '';
+      box.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 Haal verse JWT op';
+    }
+  }
+
+  function copyJwt(scenarioId) {
+    const ta = document.getElementById('jwt-ta-' + scenarioId);
+    if (!ta || !ta.value) return;
+    navigator.clipboard.writeText(ta.value).then(() => {
+      const btn = document.getElementById('copy-btn-' + scenarioId);
+      const orig = btn.textContent;
+      btn.textContent = '✓ Gekopieerd!';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  function copyAnchor(scenarioId) {
+    const el = document.getElementById('anchor-' + scenarioId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      const btns = el.parentElement.querySelectorAll('button');
+      btns.forEach(b => { const o = b.textContent; b.textContent = '✓ Gekopieerd!'; setTimeout(() => b.textContent = o, 1500); });
+    });
+  }
+
   // Tab switching
   function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach((b,i) => {
-      b.classList.toggle('active', ['demo','live'][i] === name);
+      b.classList.toggle('active', ['demo','test','live'][i] === name);
     });
     document.getElementById('tab-demo').classList.toggle('active', name === 'demo');
+    document.getElementById('tab-test').classList.toggle('active', name === 'test');
     document.getElementById('tab-live').classList.toggle('active', name === 'live');
     if (name === 'live' && !liveEs) startLiveStream();
   }
@@ -438,10 +769,16 @@
   fetch('/info').then(r => r.json()).then(d => {
     baseUrl = d.endpoints?.anchor_config?.replace('/anchor/.well-known/openid-federation', '') || window.location.origin;
     document.getElementById('baseUrlDisplay').textContent = baseUrl;
+    updateAnchors();
   }).catch(() => {
     baseUrl = window.location.origin;
     document.getElementById('baseUrlDisplay').textContent = baseUrl;
+    updateAnchors();
   });
+
+  // Bouw testscenario kaarten
+  buildTestCards();
+  updateAnchors();
 
   function startDemo() {
     document.getElementById('startBtn').disabled = true;

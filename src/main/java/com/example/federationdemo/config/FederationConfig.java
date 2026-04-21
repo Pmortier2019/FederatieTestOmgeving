@@ -21,113 +21,259 @@ public class FederationConfig {
     @Value("${federation.base-url}")
     private String baseUrl;
 
-    @Bean
-    public ECKey anchorKey() throws Exception {
-        return new ECKeyGenerator(Curve.P_256).keyID("anchor-key-1").generate();
-    }
+    // ── Bestaande entiteiten ──────────────────────────────────────────────────
 
-    @Bean
-    public ECKey intermediateKey() throws Exception {
-        return new ECKeyGenerator(Curve.P_256).keyID("intermediate-key-1").generate();
-    }
+    @Bean public ECKey anchorKey()       throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("anchor-key-1").generate(); }
+    @Bean public ECKey intermediateKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("intermediate-key-1").generate(); }
+    @Bean public ECKey leafKey()         throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-key-1").generate(); }
 
-    @Bean
-    public ECKey leafKey() throws Exception {
-        return new ECKeyGenerator(Curve.P_256).keyID("leaf-key-1").generate();
-    }
+    // ── Nieuwe entiteiten ─────────────────────────────────────────────────────
+
+    /** Tweede intermediate (HBO-raad) */
+    @Bean public ECKey intermediate2Key() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("intermediate2-key-1").generate(); }
+
+    /** Leaf onder intermediate2 (Hogeschool Amsterdam) */
+    @Bean public ECKey leaf2Key() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf2-key-1").generate(); }
+
+    /** Rogue issuer — niet opgenomen in de federatie */
+    @Bean public ECKey rogueKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("rogue-key-1").generate(); }
+
+    /** Leaf met verlopen subordinate statement */
+    @Bean public ECKey leafExpiredKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-expired-key-1").generate(); }
+
+    /** Sleutel waarmee leaf-wrongkey credentials ondertekent */
+    @Bean public ECKey leafWrongSigningKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-wrongkey-actual-1").generate(); }
+
+    /** Sleutel die intermediate registreert voor leaf-wrongkey (bewust verkeerd) */
+    @Bean public ECKey leafWrongRegisteredKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-wrongkey-registered-1").generate(); }
+
+    // ── EntityStore ───────────────────────────────────────────────────────────
 
     @Bean
     public EntityStore entityStore(
-            ECKey anchorKey,
-            ECKey intermediateKey,
-            ECKey leafKey,
+            ECKey anchorKey, ECKey intermediateKey, ECKey leafKey,
+            ECKey intermediate2Key, ECKey leaf2Key,
+            ECKey rogueKey, ECKey leafExpiredKey,
+            ECKey leafWrongSigningKey, ECKey leafWrongRegisteredKey,
             StatementBuilder builder) throws Exception {
 
         EntityStore store = new EntityStore();
-
-        Map<String, Object> anchorJwks = buildJwks(anchorKey);
-        Map<String, Object> intermediateJwks = buildJwks(intermediateKey);
-        Map<String, Object> leafJwks = buildJwks(leafKey);
-
-        store.putEcKey("anchor", anchorKey);
-        store.putEcKey("intermediate", intermediateKey);
-        store.putEcKey("leaf", leafKey);
-        store.putJwks("anchor", anchorJwks);
-        store.putJwks("intermediate", intermediateJwks);
-        store.putJwks("leaf", leafJwks);
-
         long now = Instant.now().getEpochSecond();
         long exp = now + 86400;
 
-        // Anchor entity config (self-signed)
-        Map<String, Object> anchorClaims = new LinkedHashMap<>();
-        anchorClaims.put("iss", baseUrl + "/anchor");
-        anchorClaims.put("sub", baseUrl + "/anchor");
-        anchorClaims.put("iat", now);
-        anchorClaims.put("exp", exp);
-        anchorClaims.put("jwks", anchorJwks);
-        anchorClaims.put("metadata", Map.of("federation_entity", Map.of(
-                "federation_fetch_endpoint", baseUrl + "/anchor/fetch",
-                "display_name", "Nederlandse Overheid (demo)")));
-        store.putEntityConfig("anchor", builder.sign(anchorClaims, anchorKey));
+        // Sleutels opslaan
+        Map<String, Object> anchorJwks        = buildJwks(anchorKey);
+        Map<String, Object> intermediateJwks   = buildJwks(intermediateKey);
+        Map<String, Object> leafJwks           = buildJwks(leafKey);
+        Map<String, Object> intermediate2Jwks  = buildJwks(intermediate2Key);
+        Map<String, Object> leaf2Jwks          = buildJwks(leaf2Key);
+        Map<String, Object> rogueJwks          = buildJwks(rogueKey);
+        Map<String, Object> leafExpiredJwks    = buildJwks(leafExpiredKey);
+        Map<String, Object> leafWrongSignJwks  = buildJwks(leafWrongSigningKey);
+        Map<String, Object> leafWrongRegJwks   = buildJwks(leafWrongRegisteredKey);
 
-        // Intermediate entity config (self-signed)
-        Map<String, Object> intermediateClaims = new LinkedHashMap<>();
-        intermediateClaims.put("iss", baseUrl + "/intermediate");
-        intermediateClaims.put("sub", baseUrl + "/intermediate");
-        intermediateClaims.put("iat", now);
-        intermediateClaims.put("exp", exp);
-        intermediateClaims.put("jwks", intermediateJwks);
-        intermediateClaims.put("authority_hints", List.of(baseUrl + "/anchor"));
-        intermediateClaims.put("metadata", Map.of("federation_entity", Map.of(
-                "federation_fetch_endpoint", baseUrl + "/intermediate/fetch",
-                "display_name", "Surf (demo)")));
-        store.putEntityConfig("intermediate", builder.sign(intermediateClaims, intermediateKey));
+        store.putEcKey("anchor",                 anchorKey);
+        store.putEcKey("intermediate",           intermediateKey);
+        store.putEcKey("leaf",                   leafKey);
+        store.putEcKey("intermediate2",          intermediate2Key);
+        store.putEcKey("leaf2",                  leaf2Key);
+        store.putEcKey("rogue",                  rogueKey);
+        store.putEcKey("leaf-expired",           leafExpiredKey);
+        store.putEcKey("leaf-wrongkey-signing",  leafWrongSigningKey);
+        store.putEcKey("leaf-wrongkey-registered", leafWrongRegisteredKey);
 
-        // Leaf entity config (self-signed)
-        Map<String, Object> leafClaims = new LinkedHashMap<>();
-        leafClaims.put("iss", baseUrl + "/leaf");
-        leafClaims.put("sub", baseUrl + "/leaf");
-        leafClaims.put("iat", now);
-        leafClaims.put("exp", exp);
-        leafClaims.put("jwks", leafJwks);
-        leafClaims.put("authority_hints", List.of(baseUrl + "/intermediate"));
-        leafClaims.put("metadata", Map.of(
-                "federation_entity", Map.of("display_name", "Hogeschool Utrecht (demo)"),
-                "openid_credential_issuer", Map.of(
-                        "credential_issuer", baseUrl + "/leaf",
-                        "token_endpoint_auth_method", "private_key_jwt"),
-                "vc_issuer", Map.of("jwks", leafJwks)));
-        store.putEntityConfig("leaf", builder.sign(leafClaims, leafKey));
+        store.putJwks("anchor",       anchorJwks);
+        store.putJwks("intermediate", intermediateJwks);
+        store.putJwks("leaf",         leafJwks);
+        store.putJwks("intermediate2",intermediate2Jwks);
+        store.putJwks("leaf2",        leaf2Jwks);
+        store.putJwks("rogue",        rogueJwks);
+        store.putJwks("leaf-expired", leafExpiredJwks);
+        store.putJwks("leaf-wrongkey",leafWrongSignJwks);
 
-        // Anchor subordinate statement about intermediate
-        Map<String, Object> anchorAboutIntermediate = new LinkedHashMap<>();
-        anchorAboutIntermediate.put("iss", baseUrl + "/anchor");
-        anchorAboutIntermediate.put("sub", baseUrl + "/intermediate");
-        anchorAboutIntermediate.put("iat", now);
-        anchorAboutIntermediate.put("exp", exp);
-        anchorAboutIntermediate.put("jwks", intermediateJwks);
-        anchorAboutIntermediate.put("metadata", Map.of("federation_entity", Map.of()));
-        store.putSubordinateStatement(
-                baseUrl + "/anchor",
-                baseUrl + "/intermediate",
-                builder.sign(anchorAboutIntermediate, anchorKey));
+        // ── Anchor ────────────────────────────────────────────────────────────
+        store.putEntityConfig("anchor", builder.sign(Map.of(
+                "iss", baseUrl + "/anchor",
+                "sub", baseUrl + "/anchor",
+                "iat", now, "exp", exp,
+                "jwks", anchorJwks,
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/anchor/fetch",
+                        "display_name", "Nederlandse Overheid (demo)"))),
+                anchorKey));
 
-        // Intermediate subordinate statement about leaf
-        Map<String, Object> intermediateAboutLeaf = new LinkedHashMap<>();
-        intermediateAboutLeaf.put("iss", baseUrl + "/intermediate");
-        intermediateAboutLeaf.put("sub", baseUrl + "/leaf");
-        intermediateAboutLeaf.put("iat", now);
-        intermediateAboutLeaf.put("exp", exp);
-        intermediateAboutLeaf.put("jwks", leafJwks);
-        intermediateAboutLeaf.put("metadata", Map.of(
-                "federation_entity", Map.of(),
-                "openid_credential_issuer", Map.of(),
-                "vc_issuer", Map.of("jwks", leafJwks)));
-        store.putSubordinateStatement(
-                baseUrl + "/intermediate",
-                baseUrl + "/leaf",
-                builder.sign(intermediateAboutLeaf, intermediateKey));
+        // ── Intermediate ──────────────────────────────────────────────────────
+        store.putEntityConfig("intermediate", builder.sign(linkedMap(
+                "iss", baseUrl + "/intermediate",
+                "sub", baseUrl + "/intermediate",
+                "iat", now, "exp", exp,
+                "jwks", intermediateJwks,
+                "authority_hints", List.of(baseUrl + "/anchor"),
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/intermediate/fetch",
+                        "display_name", "Surf (demo)"))),
+                intermediateKey));
+
+        // ── Leaf ──────────────────────────────────────────────────────────────
+        store.putEntityConfig("leaf", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf",
+                "sub", baseUrl + "/leaf",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Hogeschool Utrecht (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        // ── Anchor → Intermediate ─────────────────────────────────────────────
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/intermediate",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/intermediate",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        // ── Intermediate → Leaf ───────────────────────────────────────────────
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 2: Tweede trust pad — Intermediate2 + Leaf2
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEntityConfig("intermediate2", builder.sign(linkedMap(
+                "iss", baseUrl + "/intermediate2",
+                "sub", baseUrl + "/intermediate2",
+                "iat", now, "exp", exp,
+                "jwks", intermediate2Jwks,
+                "authority_hints", List.of(baseUrl + "/anchor"),
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/intermediate2/fetch",
+                        "display_name", "HBO-raad (demo)"))),
+                intermediate2Key));
+
+        store.putEntityConfig("leaf2", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf2",
+                "sub", baseUrl + "/leaf2",
+                "iat", now, "exp", exp,
+                "jwks", leaf2Jwks,
+                "authority_hints", List.of(baseUrl + "/intermediate2"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Hogeschool Amsterdam (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf2",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leaf2Jwks))),
+                leaf2Key));
+
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/intermediate2",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/intermediate2",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediate2Jwks,
+                        "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate2", baseUrl + "/leaf2",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate2",
+                        "sub", baseUrl + "/leaf2",
+                        "iat", now, "exp", exp,
+                        "jwks", leaf2Jwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leaf2Jwks))),
+                        intermediate2Key));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 3: Rogue issuer — entity bestaat, maar geen subordinate stmt
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEntityConfig("rogue", builder.sign(linkedMap(
+                "iss", baseUrl + "/rogue",
+                "sub", baseUrl + "/rogue",
+                "iat", now, "exp", exp,
+                "jwks", rogueJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Onbekende Instelling (demo)"),
+                        "vc_issuer", Map.of("jwks", rogueJwks))),
+                rogueKey));
+        // Bewust GEEN subordinate statement geregistreerd voor rogue
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 4: Verlopen subordinate statement
+        // ═════════════════════════════════════════════════════════════════════
+
+        long pastExp = now - 3600; // Verlopen 1 uur geleden
+
+        store.putEntityConfig("leaf-expired", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-expired",
+                "sub", baseUrl + "/leaf-expired",
+                "iat", now, "exp", exp,
+                "jwks", leafExpiredJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Verlopen Instelling (demo)"),
+                        "vc_issuer", Map.of("jwks", leafExpiredJwks))),
+                leafExpiredKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-expired",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-expired",
+                        "iat", pastExp - 86400,
+                        "exp", pastExp, // verlopen!
+                        "jwks", leafExpiredJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafExpiredJwks))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 5: Verkeerde sleutel in subordinate statement
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEntityConfig("leaf-wrongkey", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-wrongkey",
+                "sub", baseUrl + "/leaf-wrongkey",
+                "iat", now, "exp", exp,
+                "jwks", leafWrongSignJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Verkeerde Sleutel (demo)"),
+                        "vc_issuer", Map.of("jwks", leafWrongSignJwks))),
+                leafWrongSigningKey));
+
+        // Intermediate registreert bewust een ANDERE public key in vc_issuer.jwks
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-wrongkey",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-wrongkey",
+                        "iat", now, "exp", exp,
+                        "jwks", leafWrongSignJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafWrongRegJwks))), // bewust verkeerde JWKS
+                        intermediateKey));
 
         return store;
     }
@@ -153,5 +299,15 @@ public class FederationConfig {
         keyMap.put("x", pub.getX().toString());
         keyMap.put("y", pub.getY().toString());
         return Map.of("keys", List.of(keyMap));
+    }
+
+    /** Bouwt een LinkedHashMap met afwisselend key-value paren. */
+    @SuppressWarnings("unchecked")
+    private <K, V> Map<K, V> linkedMap(Object... kvPairs) {
+        LinkedHashMap<K, V> map = new LinkedHashMap<>();
+        for (int i = 0; i < kvPairs.length; i += 2) {
+            map.put((K) kvPairs[i], (V) kvPairs[i + 1]);
+        }
+        return map;
     }
 }

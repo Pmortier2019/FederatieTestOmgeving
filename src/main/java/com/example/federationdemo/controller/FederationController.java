@@ -76,8 +76,10 @@ public class FederationController {
         }
         String url = baseUrl + "/" + entity + "/fetch?sub=" + subjectEntityId;
 
-        if ("leaf".equals(entity)) {
-            liveTracker.broadcast(DemoEvent.httpCallFailed(url, 404, "Leaf heeft geen fetch endpoint"));
+        // Alleen intermediates (entiteiten met subordinate statements) bedienen fetch
+        if (!java.util.Set.of("anchor", "intermediate", "intermediate2").contains(entity)) {
+            liveTracker.broadcast(DemoEvent.httpCallFailed(url, 404,
+                    entity + " heeft geen fetch endpoint (geen intermediate)"));
             return ResponseEntity.notFound().build();
         }
 
