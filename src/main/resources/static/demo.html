@@ -781,6 +781,48 @@
       ],
       desc: "De trust anchor plaatst constraints.max_path_length: 0 in zijn subordinate statement, wat betekent dat géén intermediates zijn toegestaan. Er zit toch een intermediate in de chain. De verifier moet dit constraints-veld controleren en de chain afwijzen.",
       credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 15,
+      category: "policy",
+      title: "Metadata policy - toegestaan credential type",
+      valid: true,
+      issuer: "leaf-policy-type-ok",
+      chain: [
+        { label: "Leaf (type toegestaan)", type: "leaf" },
+        { label: "Intermediate (subset_of)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate beperkt credential_types_supported met subset_of, maar DiplomaCertificate valt binnen de toegestane set. De resolved metadata blijft compatibel met de uitgegeven credential en verificatie moet slagen.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 16,
+      category: "policy",
+      title: "Metadata policy - JWKS value blijft geldig",
+      valid: true,
+      issuer: "leaf-policy-jwks-ok",
+      chain: [
+        { label: "Leaf (geldige sleutel)", type: "leaf" },
+        { label: "Intermediate (value)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate gebruikt de value-operator op vc_issuer.jwks, maar zet die op dezelfde public key waarmee de leaf de credential signeert. De policy wordt toegepast en de credential-signature blijft geldig.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 17,
+      category: "policy",
+      title: "Metadata policy crit - bekende operator",
+      valid: true,
+      issuer: "leaf-policy-crit-ok",
+      chain: [
+        { label: "Leaf", type: "leaf" },
+        { label: "Intermediate (crit subset_of)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate markeert subset_of als kritische operator in metadata_policy_crit. Omdat subset_of bekend is en daadwerkelijk in de policy voorkomt, mag de wallet backend de policy evalueren en de chain accepteren.",
+      credentialType: "DiplomaCertificate"
     }
   ];
 

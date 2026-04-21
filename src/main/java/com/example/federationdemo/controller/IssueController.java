@@ -62,7 +62,7 @@ public class IssueController {
             ECKey signingKey = resolveSigningKey(issuerName);
             if (signingKey == null) {
                 throw new IllegalArgumentException("Onbekende issuer: " + issuerName +
-                        ". Geldige waarden: leaf, leaf2, rogue, leaf-expired, leaf-wrongkey, leaf-multihint, leaf-nohint, leaf-subwrong, leaf-policy-type, leaf-policy-jwks, leaf-policy-crit, leaf-deep, leaf-maxpath");
+                        ". Geldige waarden: leaf, leaf2, rogue, leaf-expired, leaf-wrongkey, leaf-multihint, leaf-nohint, leaf-subwrong, leaf-policy-type, leaf-policy-jwks, leaf-policy-crit, leaf-policy-type-ok, leaf-policy-jwks-ok, leaf-policy-crit-ok, leaf-deep, leaf-maxpath");
             }
 
             long now = Instant.now().getEpochSecond();
@@ -114,6 +114,9 @@ public class IssueController {
             case "leaf-policy-type" -> entityStore.getEcKey("leaf");
             case "leaf-policy-jwks" -> entityStore.getEcKey("leaf");
             case "leaf-policy-crit" -> entityStore.getEcKey("leaf");
+            case "leaf-policy-type-ok" -> entityStore.getEcKey("leaf");
+            case "leaf-policy-jwks-ok" -> entityStore.getEcKey("leaf");
+            case "leaf-policy-crit-ok" -> entityStore.getEcKey("leaf");
             case "leaf-deep"       -> entityStore.getEcKey("leaf");
             case "leaf-maxpath"    -> entityStore.getEcKey("leaf");
             default               -> null;

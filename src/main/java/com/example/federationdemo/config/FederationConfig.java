@@ -469,6 +469,108 @@ public class FederationConfig {
                         intermediateKey));
 
         // ═════════════════════════════════════════════════════════════════════
+        // Scenario 15: metadata_policy staat credential type expliciet toe
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEntityConfig("leaf-policy-type-ok", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-policy-type-ok",
+                "sub", baseUrl + "/leaf-policy-type-ok",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Policy Type OK Leaf (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-policy-type-ok",
+                                "credential_types_supported", List.of("DiplomaCertificate", "StudentCardCredential")),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-policy-type-ok",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-policy-type-ok",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks)),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "credential_types_supported", Map.of(
+                                                "subset_of", List.of("DiplomaCertificate", "StudentCardCredential"))))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 16: metadata_policy value zet JWKS op dezelfde geldige key
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEntityConfig("leaf-policy-jwks-ok", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-policy-jwks-ok",
+                "sub", baseUrl + "/leaf-policy-jwks-ok",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Policy JWKS OK Leaf (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-policy-jwks-ok",
+                                "credential_types_supported", List.of("DiplomaCertificate")),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-policy-jwks-ok",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-policy-jwks-ok",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks)),
+                        "metadata_policy", Map.of(
+                                "vc_issuer", Map.of(
+                                        "jwks", Map.of("value", leafJwks)))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 17: metadata_policy_crit gebruikt bekende operator
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEntityConfig("leaf-policy-crit-ok", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-policy-crit-ok",
+                "sub", baseUrl + "/leaf-policy-crit-ok",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Policy Crit OK Leaf (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-policy-crit-ok",
+                                "credential_types_supported", List.of("DiplomaCertificate")),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-policy-crit-ok",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-policy-crit-ok",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks)),
+                        "metadata_policy_crit", List.of("subset_of"),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "credential_types_supported", Map.of(
+                                                "subset_of", List.of("DiplomaCertificate"))))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
         // Scenario 13: chain dieper dan MAX_HOPS
         // ═════════════════════════════════════════════════════════════════════
 
