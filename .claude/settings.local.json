@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /tmp)",
+      "Bash(jar tf *)",
+      "Bash(curl -s https://federationtest-production.up.railway.app/anchor/.well-known/openid-federation)",
+      "Bash(curl -s https://federationtest-production.up.railway.app/leaf/.well-known/openid-federation)"
+    ]
+  }
+}

@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -18,34 +20,32 @@ import java.util.Map;
 @Configuration
 public class FederationConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(FederationConfig.class);
+
     @Value("${federation.base-url}")
     private String baseUrl;
 
-    // ── Bestaande entiteiten ──────────────────────────────────────────────────
+    // ── Sleutels: laden uit env var indien aanwezig, anders nieuw genereren ───
 
-    @Bean public ECKey anchorKey()       throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("anchor-key-1").generate(); }
-    @Bean public ECKey intermediateKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("intermediate-key-1").generate(); }
-    @Bean public ECKey leafKey()         throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-key-1").generate(); }
+    @Bean public ECKey anchorKey()              throws Exception { return loadOrGenerate("ANCHOR_JWK",           "anchor-key-1"); }
+    @Bean public ECKey intermediateKey()        throws Exception { return loadOrGenerate("INTERMEDIATE_JWK",     "intermediate-key-1"); }
+    @Bean public ECKey leafKey()                throws Exception { return loadOrGenerate("LEAF_JWK",             "leaf-key-1"); }
+    @Bean public ECKey intermediate2Key()       throws Exception { return loadOrGenerate("INTERMEDIATE2_JWK",    "intermediate2-key-1"); }
+    @Bean public ECKey leaf2Key()               throws Exception { return loadOrGenerate("LEAF2_JWK",            "leaf2-key-1"); }
+    @Bean public ECKey rogueKey()               throws Exception { return loadOrGenerate("ROGUE_JWK",            "rogue-key-1"); }
+    @Bean public ECKey leafExpiredKey()         throws Exception { return loadOrGenerate("LEAF_EXPIRED_JWK",     "leaf-expired-key-1"); }
+    @Bean public ECKey leafWrongSigningKey()    throws Exception { return loadOrGenerate("LEAF_WRONGKEY_SIGN_JWK",  "leaf-wrongkey-actual-1"); }
+    @Bean public ECKey leafWrongRegisteredKey() throws Exception { return loadOrGenerate("LEAF_WRONGKEY_REG_JWK",   "leaf-wrongkey-registered-1"); }
 
-    // ── Nieuwe entiteiten ─────────────────────────────────────────────────────
-
-    /** Tweede intermediate (HBO-raad) */
-    @Bean public ECKey intermediate2Key() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("intermediate2-key-1").generate(); }
-
-    /** Leaf onder intermediate2 (Hogeschool Amsterdam) */
-    @Bean public ECKey leaf2Key() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf2-key-1").generate(); }
-
-    /** Rogue issuer — niet opgenomen in de federatie */
-    @Bean public ECKey rogueKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("rogue-key-1").generate(); }
-
-    /** Leaf met verlopen subordinate statement */
-    @Bean public ECKey leafExpiredKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-expired-key-1").generate(); }
-
-    /** Sleutel waarmee leaf-wrongkey credentials ondertekent */
-    @Bean public ECKey leafWrongSigningKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-wrongkey-actual-1").generate(); }
-
-    /** Sleutel die intermediate registreert voor leaf-wrongkey (bewust verkeerd) */
-    @Bean public ECKey leafWrongRegisteredKey() throws Exception { return new ECKeyGenerator(Curve.P_256).keyID("leaf-wrongkey-registered-1").generate(); }
+    private ECKey loadOrGenerate(String envVar, String keyId) throws Exception {
+        String jwkJson = System.getenv(envVar);
+        if (jwkJson != null && !jwkJson.isBlank()) {
+            log.info("Sleutel '{}' geladen uit env var {}", keyId, envVar);
+            return ECKey.parse(jwkJson);
+        }
+        log.warn("Env var {} niet gevonden — tijdelijke sleutel gegenereerd voor '{}'", envVar, keyId);
+        return new ECKeyGenerator(Curve.P_256).keyID(keyId).generate();
+    }
 
     // ── EntityStore ───────────────────────────────────────────────────────────
 
