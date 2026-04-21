@@ -53,5 +53,31 @@ Verwacht resultaat:
 | GET | `/{entity}/fetch?sub=...` | `application/entity-statement+jwt` | Subordinate statement JWT |
 | GET | `/info` | `application/json` | Debug-overzicht van alle entiteiten |
 | POST | `/verify` | `application/json` | Trust chain validatie |
+| GET | `/test-scenarios` | `application/json` | Overzicht van alle testscenario's |
+| POST | `/test-scenarios/{id}/run` | `application/json` | Issue + verify voor een scenario, inclusief expected/actual resultaat |
+| POST | `/test-scenarios/run-all` | `application/json` | Draait alle scenario's en geeft een samenvatting |
 | GET | `/swagger-ui.html` | `text/html` | Swagger UI |
 | GET | `/actuator/health` | `application/json` | Health check (Railway) |
+
+## Testscenario's snel draaien
+
+Een scenario draaien:
+
+```bash
+curl -X POST "{BASE_URL}/test-scenarios/9/run"
+```
+
+De response bevat onder `trace` de gebruikte chain-input:
+
+- `issuerIdentifier`
+- `trustAnchorEntityId`
+- `entityConfigurationUrl`
+- `authorityHints`
+- `expectedFetchCalls`
+- `policySummary` indien het een metadata policy scenario is
+
+Alle scenario's draaien:
+
+```bash
+curl -X POST "{BASE_URL}/test-scenarios/run-all"
+```

@@ -382,6 +382,49 @@
     border-radius: 4px;
     padding: 1px 5px;
   }
+  .trace-panel {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .trace-title {
+    color: #e6edf3;
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .trace-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 8px;
+    align-items: start;
+  }
+  .trace-label {
+    color: #8b949e;
+    font-weight: 700;
+  }
+  .trace-value {
+    color: #79c0ff;
+    font-family: monospace;
+    word-break: break-all;
+  }
+  .trace-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .trace-step {
+    color: #e6edf3;
+    font-family: monospace;
+    word-break: break-all;
+  }
+  .trace-policy {
+    color: #e3b341;
+  }
   .spinner {
     display: inline-block;
     width: 14px; height: 14px;
@@ -544,6 +587,16 @@
 </div>
 
 <div id="tab-test" class="tab-pane">
+  <div class="test-grid" style="margin-bottom:16px;">
+    <div class="test-card">
+      <div class="test-body">
+        <div class="test-actions">
+          <button class="btn-fetch" id="run-all-btn" onclick="runAllScenarios()">Run alle testscenario's</button>
+        </div>
+        <div class="verify-result" id="run-all-result"></div>
+      </div>
+    </div>
+  </div>
   <div class="test-grid" id="testGrid"></div>
 </div>
 
@@ -853,6 +906,7 @@
             </div>
             <div class="test-desc">${esc(s.desc)}</div>
             <div class="test-chain">${chainHtml}</div>
+            <div id="trace-${s.id}">${renderTrace(scenarioTrace(s))}</div>
             <div class="test-anchor-row">
               <span>Trust Anchor:</span>
               <code id="anchor-${s.id}">laden...</code>
@@ -895,10 +949,94 @@
     return baseUrl + (s.anchorPath || '/anchor');
   }
 
+  function scenarioTrace(s) {
+    const issuer = baseUrl ? baseUrl + '/' + s.issuer : '/' + s.issuer;
+    const anchor = scenarioAnchor(s);
+    return {
+      issuerIdentifier: issuer,
+      trustAnchorEntityId: anchor,
+      credentialType: s.credentialType,
+      entityConfigurationUrl: issuer + '/.well-known/openid-federation',
+      authorityHints: authorityHintsFor(s),
+      expectedFetchCalls: expectedFetchCallsFor(s),
+      policySummary: policySummaryFor(s)
+    };
+  }
+
+  function authorityHintsFor(s) {
+    if (!baseUrl) return [];
+    switch (s.issuer) {
+      case 'leaf2': return [baseUrl + '/intermediate2'];
+      case 'leaf-multihint': return [baseUrl + '/nonexistent-intermediate', baseUrl + '/intermediate'];
+      case 'leaf-nohint': return [baseUrl + '/nonexistent-1', baseUrl + '/nonexistent-2'];
+      case 'leaf-deep': return [baseUrl + '/inter-depth-1'];
+      case 'leaf-maxpath': return [baseUrl + '/intermediate-maxpath'];
+      default: return [baseUrl + '/intermediate'];
+    }
+  }
+
+  function expectedFetchCallsFor(s) {
+    if (!baseUrl) return [];
+    const issuer = baseUrl + '/' + s.issuer;
+    switch (s.issuer) {
+      case 'leaf2':
+        return [baseUrl + '/intermediate2/fetch?sub=' + issuer, baseUrl + '/anchor/fetch?sub=' + baseUrl + '/intermediate2'];
+      case 'leaf-multihint':
+        return [baseUrl + '/nonexistent-intermediate/.well-known/openid-federation', baseUrl + '/intermediate/fetch?sub=' + issuer, baseUrl + '/anchor/fetch?sub=' + baseUrl + '/intermediate'];
+      case 'leaf-nohint':
+        return [baseUrl + '/nonexistent-1/.well-known/openid-federation', baseUrl + '/nonexistent-2/.well-known/openid-federation'];
+      case 'leaf-deep':
+        return [1,2,3,4,5,6].map(i => i === 1
+          ? baseUrl + '/inter-depth-1/fetch?sub=' + issuer
+          : baseUrl + '/inter-depth-' + i + '/fetch?sub=' + baseUrl + '/inter-depth-' + (i - 1));
+      case 'leaf-maxpath':
+        return [baseUrl + '/intermediate-maxpath/fetch?sub=' + issuer, baseUrl + '/anchor/fetch?sub=' + baseUrl + '/intermediate-maxpath'];
+      default:
+        return [baseUrl + '/intermediate/fetch?sub=' + issuer, baseUrl + '/anchor/fetch?sub=' + baseUrl + '/intermediate'];
+    }
+  }
+
+  function policySummaryFor(s) {
+    switch (s.issuer) {
+      case 'leaf-policy-type': return 'metadata_policy subset_of laat alleen StudentCardCredential toe; DiplomaCertificate wordt afgewezen.';
+      case 'leaf-policy-jwks': return 'metadata_policy value overschrijft vc_issuer.jwks met een andere key.';
+      case 'leaf-policy-crit': return 'metadata_policy_crit bevat unknown_operator; verifier moet afwijzen.';
+      case 'leaf-policy-type-ok': return 'metadata_policy subset_of bevat DiplomaCertificate; verifier mag accepteren.';
+      case 'leaf-policy-jwks-ok': return 'metadata_policy value zet vc_issuer.jwks op dezelfde geldige key.';
+      case 'leaf-policy-crit-ok': return 'metadata_policy_crit bevat bekende operator subset_of.';
+      default: return null;
+    }
+  }
+
+  function renderTrace(trace) {
+    const hints = trace.authorityHints?.length
+      ? trace.authorityHints.map((h, i) => `<div class="trace-step">${i + 1}. ${esc(h)}</div>`).join('')
+      : '<div class="trace-step">Geen authority_hints</div>';
+    const fetches = trace.expectedFetchCalls?.length
+      ? trace.expectedFetchCalls.map((f, i) => `<div class="trace-step">${i + 1}. GET ${esc(f)}</div>`).join('')
+      : '<div class="trace-step">Geen fetch-calls verwacht</div>';
+    const policy = trace.policySummary
+      ? `<div class="trace-row"><div class="trace-label">Policy</div><div class="trace-value trace-policy">${esc(trace.policySummary)}</div></div>`
+      : '';
+
+    return `<div class="trace-panel">
+      <div class="trace-title">Chain input en verwachte resolutie</div>
+      <div class="trace-row"><div class="trace-label">Issuer</div><div class="trace-value">${esc(trace.issuerIdentifier)}</div></div>
+      <div class="trace-row"><div class="trace-label">Trust anchor</div><div class="trace-value">${esc(trace.trustAnchorEntityId)}</div></div>
+      <div class="trace-row"><div class="trace-label">Credential type</div><div class="trace-value">${esc(trace.credentialType)}</div></div>
+      <div class="trace-row"><div class="trace-label">Entity config</div><div class="trace-value">GET ${esc(trace.entityConfigurationUrl)}</div></div>
+      <div class="trace-row"><div class="trace-label">Authority hints</div><div class="trace-list">${hints}</div></div>
+      <div class="trace-row"><div class="trace-label">Fetch flow</div><div class="trace-list">${fetches}</div></div>
+      ${policy}
+    </div>`;
+  }
+
   function updateAnchors() {
     TEST_SCENARIOS.forEach(s => {
       const el = document.getElementById('anchor-' + s.id);
       if (el) el.textContent = scenarioAnchor(s);
+      const traceEl = document.getElementById('trace-' + s.id);
+      if (traceEl) traceEl.innerHTML = renderTrace(scenarioTrace(s));
     });
   }
 
@@ -959,42 +1097,45 @@
 
     const btn = document.getElementById('verify-btn-' + scenarioId);
     const result = document.getElementById('verify-result-' + scenarioId);
-    const anchor = scenarioAnchor(scenario);
+    const copyBtn = document.getElementById('copy-btn-' + scenarioId);
+    const box = document.getElementById('jwt-box-' + scenarioId);
+    const ta  = document.getElementById('jwt-ta-' + scenarioId);
+    const meta = document.getElementById('jwt-meta-' + scenarioId);
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Controleren...';
     result.className = 'verify-result visible';
-    result.textContent = 'Credential ophalen en /verify aanroepen...';
+    result.textContent = 'Scenario endpoint aanroepen...';
 
     try {
-      let jwt = scenarioJwts.get(scenarioId);
-      if (!jwt) {
-        jwt = await fetchTestJwt(scenarioId, true);
-      }
-
-      const resp = await fetch('/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          issuerIdentifier: baseUrl + '/' + scenario.issuer,
-          trustAnchorEntityId: anchor,
-          credentialJwt: jwt
-        })
+      const resp = await fetch(`/test-scenarios/${scenarioId}/run?includeCredential=true`, {
+        method: 'POST'
       });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
-      const actualTrusted = Boolean(data.trusted);
-      const expectationMet = actualTrusted === Boolean(scenario.valid);
 
-      result.className = 'verify-result visible ' + (expectationMet ? 'pass' : 'fail');
-      if (expectationMet) {
-        result.innerHTML = scenario.valid
-          ? `PASS: /verify accepteerde dit scenario zoals verwacht. Anchor: <code>${esc(anchor)}</code>`
-          : `PASS: /verify wees dit scenario af zoals verwacht. Fout: <code>${esc(data.error || 'afgewezen')}</code>`;
+      if (data.credentialJwt) {
+        scenarioJwts.set(scenarioId, data.credentialJwt);
+        ta.value = data.credentialJwt;
+        meta.innerHTML = `
+          <span>iss: <b>${esc(baseUrl + '/' + scenario.issuer)}</b></span>
+          <span>verwacht: <b>${scenario.valid ? 'trusted' : 'rejected'}</b></span>
+          <span>actual: <b>${data.actualTrusted ? 'trusted' : 'rejected'}</b></span>
+        `;
+        box.classList.add('visible');
+        copyBtn.disabled = false;
+      }
+
+      result.className = 'verify-result visible ' + (data.passed ? 'pass' : 'fail');
+      const traceHtml = data.trace ? `<div style="margin-top:10px">${renderTrace(data.trace)}</div>` : '';
+      if (data.passed) {
+        result.innerHTML = data.expectedTrusted
+          ? `PASS: scenario endpoint accepteerde dit scenario zoals verwacht. Anchor: <code>${esc(data.trustAnchorEntityId)}</code>${traceHtml}`
+          : `PASS: scenario endpoint wees dit scenario af zoals verwacht. Fout: <code>${esc(data.error || 'afgewezen')}</code>${traceHtml}`;
       } else {
-        result.innerHTML = scenario.valid
-          ? `FAIL: dit scenario had geldig moeten zijn, maar /verify wees het af. Fout: <code>${esc(data.error || 'onbekend')}</code>`
-          : `FAIL: dit scenario had ongeldig moeten zijn, maar /verify accepteerde het. Controleer fixture of validator.`;
+        result.innerHTML = data.expectedTrusted
+          ? `FAIL: dit scenario had geldig moeten zijn, maar werd afgewezen. Fout: <code>${esc(data.error || 'onbekend')}</code>${traceHtml}`
+          : `FAIL: dit scenario had ongeldig moeten zijn, maar werd geaccepteerd. Controleer fixture of validator.${traceHtml}`;
       }
     } catch (e) {
       result.className = 'verify-result visible fail';
@@ -1002,6 +1143,35 @@
     } finally {
       btn.disabled = false;
       btn.innerHTML = 'Controleer verwachting';
+    }
+  }
+
+  async function runAllScenarios() {
+    const btn = document.getElementById('run-all-btn');
+    const result = document.getElementById('run-all-result');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Alle scenario\'s draaien...';
+    result.className = 'verify-result visible';
+    result.textContent = 'Alle scenario endpoints worden uitgevoerd...';
+
+    try {
+      const resp = await fetch('/test-scenarios/run-all?includeCredentials=false', {
+        method: 'POST'
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      const failed = data.results.filter(r => !r.passed);
+      result.className = 'verify-result visible ' + (data.failed === 0 ? 'pass' : 'fail');
+      result.innerHTML = data.failed === 0
+        ? `PASS: ${data.passed}/${data.total} scenario's voldeden aan de verwachting.`
+        : `FAIL: ${data.failed}/${data.total} scenario's faalden. Fout in: <code>${esc(failed.map(r => r.id).join(', '))}</code>`;
+    } catch (e) {
+      result.className = 'verify-result visible fail';
+      result.innerHTML = `FAIL: run-all kon niet uitgevoerd worden. Fout: <code>${esc(e.message)}</code>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "Run alle testscenario's";
     }
   }
 
