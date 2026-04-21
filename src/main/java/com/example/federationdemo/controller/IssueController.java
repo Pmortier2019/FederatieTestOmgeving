@@ -43,6 +43,14 @@ public class IssueController {
             - `rogue` — Onbekende Instelling, niet opgenomen in de federatie ❌
             - `leaf-expired` — Verlopen Instelling, subordinate statement is verlopen ❌
             - `leaf-wrongkey` — Verkeerde Sleutel, chain klopt maar JWKS matcht niet met signatuur ❌
+            - `leaf-multihint` — Twee authority hints (één kapot, één geldig), chain slaagt toch ✅
+            - `leaf-nohint` — Beide authority hints verwijzen nergens, chain mislukt ❌
+            - `leaf-subwrong` — Subordinate statement heeft verkeerde sub-claim, chain mislukt ❌
+            - `leaf-policy-type` — Metadata policy staat credential type niet toe ❌
+            - `leaf-policy-jwks` — Metadata policy overschrijft JWKS ❌
+            - `leaf-policy-crit` — Onbekende kritische metadata policy operator ❌
+            - `leaf-deep` — Chain dieper dan MAX ❌
+            - `leaf-maxpath` — max_path_length constraint overschreden ❌
             """
     )
     @PostMapping(value = "/issue", consumes = "application/json", produces = "application/json")
@@ -54,7 +62,7 @@ public class IssueController {
             ECKey signingKey = resolveSigningKey(issuerName);
             if (signingKey == null) {
                 throw new IllegalArgumentException("Onbekende issuer: " + issuerName +
-                        ". Geldige waarden: leaf, leaf2, rogue, leaf-expired, leaf-wrongkey");
+                        ". Geldige waarden: leaf, leaf2, rogue, leaf-expired, leaf-wrongkey, leaf-multihint, leaf-nohint, leaf-subwrong, leaf-policy-type, leaf-policy-jwks, leaf-policy-crit, leaf-deep, leaf-maxpath");
             }
 
             long now = Instant.now().getEpochSecond();
@@ -99,8 +107,16 @@ public class IssueController {
             case "leaf2"        -> entityStore.getEcKey("leaf2");
             case "rogue"        -> entityStore.getEcKey("rogue");
             case "leaf-expired" -> entityStore.getEcKey("leaf-expired");
-            case "leaf-wrongkey" -> entityStore.getEcKey("leaf-wrongkey-signing"); // bewust afwijkend
-            default             -> null;
+            case "leaf-wrongkey"  -> entityStore.getEcKey("leaf-wrongkey-signing"); // bewust afwijkend
+            case "leaf-multihint" -> entityStore.getEcKey("leaf-multihint");
+            case "leaf-nohint"    -> entityStore.getEcKey("leaf-nohint");
+            case "leaf-subwrong"  -> entityStore.getEcKey("leaf-subwrong");
+            case "leaf-policy-type" -> entityStore.getEcKey("leaf");
+            case "leaf-policy-jwks" -> entityStore.getEcKey("leaf");
+            case "leaf-policy-crit" -> entityStore.getEcKey("leaf");
+            case "leaf-deep"       -> entityStore.getEcKey("leaf");
+            case "leaf-maxpath"    -> entityStore.getEcKey("leaf");
+            default               -> null;
         };
     }
 

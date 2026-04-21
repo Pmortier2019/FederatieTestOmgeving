@@ -63,82 +63,90 @@ public class TrustChainResolver {
         // Step 1-4: Fetch and validate leaf entity config
         String leafConfigJwt = fetchEntityConfig(issuerIdentifier);
         ParsedJwt leafConfig = jwtParser.parse(leafConfigJwt);
-        statementValidator.validate(leafConfig);
+        validateSelfIssuedConfig(leafConfig, issuerIdentifier);
         PublicKey leafPublicKey = extractPublicKey(leafConfig.jwks(), leafConfigJwt);
         statementValidator.validate(leafConfig, leafPublicKey);
 
         List<String> statementList = new ArrayList<>();
         statementList.add(leafConfigJwt);
 
-        // Walk up the chain
-        List<String> subordinateJwts = new ArrayList<>();
-        ParsedJwt currentConfig = leafConfig;
-        String currentId = issuerIdentifier;
-        int hops = 0;
+        TrustChain chain = resolveFromConfig(leafConfig, issuerIdentifier, trustAnchorEntityId,
+                statementList, new ArrayList<>(), 0, leafConfig.metadata());
 
-        while (true) {
-            if (hops >= MAX_HOPS) {
-                throw new IllegalStateException("Maximum trust chain depth (" + MAX_HOPS + ") exceeded");
-            }
-            hops++;
-
-            List<String> hints = currentConfig.authorityHints();
-            if (hints == null || hints.isEmpty()) {
-                throw new IllegalStateException("Entity '" + currentId +
-                        "' has no authority_hints; cannot reach trust anchor");
-            }
-            String parentId = hints.get(0);
-
-            // Step 5-7: Fetch and validate parent entity config
-            String parentConfigJwt = fetchEntityConfig(parentId);
-            ParsedJwt parentConfig = jwtParser.parse(parentConfigJwt);
-            statementValidator.validate(parentConfig);
-            PublicKey parentPublicKey = extractPublicKey(parentConfig.jwks(), parentConfigJwt);
-            statementValidator.validate(parentConfig, parentPublicKey);
-
-            // Step 8-10: Fetch and validate subordinate statement
-            String subStatementJwt = fetchSubordinateStatement(parentId, currentId);
-            ParsedJwt subStatement = jwtParser.parse(subStatementJwt);
-            statementValidator.validate(subStatement);
-            statementValidator.validate(subStatement, parentPublicKey);
-
-            // Validate constraints
-            if (subStatement.constraints() != null) {
-                Map<String, Object> leafMetadata = leafConfig.metadata();
-                constraintsValidator.validate(subStatement.constraints(), hops - 1, leafMetadata);
-            }
-
-            subordinateJwts.add(0, subStatementJwt);
-
-            if (parentId.equals(trustAnchorEntityId)) {
-                // Step 12-13: Verify anchor with configured JWKS
-                List<Map<String, Object>> anchorJwksList = federationProperties.getTrustAnchorJwks();
-                if (anchorJwksList == null || anchorJwksList.isEmpty()) {
-                    throw new IllegalStateException("Trust anchor JWKS not configured");
-                }
-                PublicKey anchorConfiguredKey = extractKeyFromList(anchorJwksList, parentConfigJwt);
-                statementValidator.validate(parentConfig, anchorConfiguredKey);
-
-                // Assemble final statement list: [leaf, subordinate statements..., anchor]
-                statementList.addAll(subordinateJwts);
-                statementList.add(parentConfigJwt);
-
-                // Step 14: Trust mark validation
-                if (requiredTrustMarkId != null) {
-                    trustMarkValidator.validateEntityHasTrustMark(
-                            leafConfig, requiredTrustMarkId, anchorConfiguredKey);
-                }
-
-                // Step 15: Evaluate metadata policy
-                TrustChain partialChain = new TrustChain(statementList, null);
-                Map<String, Object> resolvedMetadata = policyEvaluator.evaluateChain(partialChain);
-
-                return new TrustChain(statementList, resolvedMetadata);
-            }
-
-            currentConfig = parentConfig;
-            currentId = parentId;
+        // Step 14: Trust mark validation
+        if (requiredTrustMarkId != null) {
+            ParsedJwt leaf = jwtParser.parse(chain.statements().get(0));
+            ParsedJwt anchor = jwtParser.parse(chain.statements().get(chain.statements().size() - 1));
+            PublicKey anchorKey = extractKeyFromList(federationProperties.getTrustAnchorJwks(), anchor.rawJwt());
+            trustMarkValidator.validateEntityHasTrustMark(leaf, requiredTrustMarkId, anchorKey);
         }
+
+        return chain;
+    }
+
+    private TrustChain resolveFromConfig(ParsedJwt currentConfig,
+                                         String currentId,
+                                         String trustAnchorEntityId,
+                                         List<String> baseStatements,
+                                         List<String> subordinateJwts,
+                                         int hops,
+                                         Map<String, Object> leafMetadata) {
+        if (hops >= MAX_HOPS) {
+            throw new IllegalStateException("Maximum trust chain depth (" + MAX_HOPS + ") exceeded");
+        }
+
+        List<String> hints = currentConfig.authorityHints();
+        if (hints == null || hints.isEmpty()) {
+            throw new IllegalStateException("Entity '" + currentId +
+                    "' has no authority_hints; cannot reach trust anchor");
+        }
+
+        List<String> failures = new ArrayList<>();
+        for (String parentId : hints) {
+            try {
+                String parentConfigJwt = fetchEntityConfig(parentId);
+                ParsedJwt parentConfig = jwtParser.parse(parentConfigJwt);
+                validateSelfIssuedConfig(parentConfig, parentId);
+                PublicKey parentPublicKey = extractPublicKey(parentConfig.jwks(), parentConfigJwt);
+                statementValidator.validate(parentConfig, parentPublicKey);
+
+                String subStatementJwt = fetchSubordinateStatement(parentId, currentId);
+                ParsedJwt subStatement = jwtParser.parse(subStatementJwt);
+                statementValidator.validate(subStatement);
+                statementValidator.validate(subStatement, parentPublicKey);
+                validateSubordinateStatement(subStatement, parentId, currentId);
+
+                if (subStatement.constraints() != null) {
+                    constraintsValidator.validate(subStatement.constraints(), hops, leafMetadata);
+                }
+
+                List<String> nextSubordinates = new ArrayList<>(subordinateJwts);
+                nextSubordinates.add(0, subStatementJwt);
+
+                if (parentId.equals(trustAnchorEntityId)) {
+                    List<Map<String, Object>> anchorJwksList = federationProperties.getTrustAnchorJwks();
+                    if (anchorJwksList == null || anchorJwksList.isEmpty()) {
+                        throw new IllegalStateException("Trust anchor JWKS not configured");
+                    }
+                    PublicKey anchorConfiguredKey = extractKeyFromList(anchorJwksList, parentConfigJwt);
+                    statementValidator.validate(parentConfig, anchorConfiguredKey);
+
+                    List<String> statements = new ArrayList<>(baseStatements);
+                    statements.addAll(nextSubordinates);
+                    statements.add(parentConfigJwt);
+                    TrustChain partialChain = new TrustChain(statements, null);
+                    Map<String, Object> resolvedMetadata = policyEvaluator.evaluateChain(partialChain);
+                    return new TrustChain(statements, resolvedMetadata);
+                }
+
+                return resolveFromConfig(parentConfig, parentId, trustAnchorEntityId,
+                        baseStatements, nextSubordinates, hops + 1, leafMetadata);
+            } catch (Exception ex) {
+                failures.add(parentId + ": " + ex.getMessage());
+            }
+        }
+        throw new IllegalStateException("No authority_hint led to trust anchor '" +
+                trustAnchorEntityId + "'. Failures: " + failures);
     }
 
     public void verifyCredentialSigningKey(TrustChain chain, String kid) {
@@ -178,6 +186,7 @@ public class TrustChainResolver {
 
         ParsedJwt leafConfig = jwtParser.parse(leafConfigJwt);
         statementValidator.validate(leafConfig);
+        validateSelfIssuedConfig(leafConfig, leafConfig.iss());
         PublicKey leafKey = extractPublicKey(leafConfig.jwks(), leafConfigJwt);
         statementValidator.validate(leafConfig, leafKey);
 
@@ -198,6 +207,22 @@ public class TrustChainResolver {
         TrustChain partialChain = new TrustChain(embedded, null);
         Map<String, Object> resolvedMetadata = policyEvaluator.evaluateChain(partialChain);
         return new TrustChain(embedded, resolvedMetadata);
+    }
+
+    private void validateSelfIssuedConfig(ParsedJwt config, String expectedEntityId) {
+        statementValidator.validate(config);
+        if (!Objects.equals(config.iss(), expectedEntityId) || !Objects.equals(config.sub(), expectedEntityId)) {
+            throw new IllegalArgumentException("Entity configuration iss/sub must both equal " + expectedEntityId);
+        }
+    }
+
+    private void validateSubordinateStatement(ParsedJwt statement, String expectedIssuer, String expectedSubject) {
+        if (!Objects.equals(statement.iss(), expectedIssuer)) {
+            throw new IllegalArgumentException("Subordinate statement iss does not match parent: " + statement.iss());
+        }
+        if (!Objects.equals(statement.sub(), expectedSubject)) {
+            throw new IllegalArgumentException("Subordinate statement sub does not match subject: " + statement.sub());
+        }
     }
 
     private String fetchEntityConfig(String entityId) {

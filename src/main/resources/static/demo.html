@@ -529,6 +529,7 @@
   // ── Testscenario's ──────────────────────────────────────────────────────────
 
   const TEST_SCENARIOS = [
+    // ── Geldige chains ──────────────────────────────────────────────────────
     {
       id: 1,
       title: "Geldig pad — Hogeschool Utrecht",
@@ -539,7 +540,7 @@
         { label: "Surf", type: "inter" },
         { label: "Nederlandse Overheid", type: "anchor" }
       ],
-      desc: "Volledige en geldige trust chain. De leaf is geregistreerd bij Surf, en Surf is geregistreerd bij de Nederlandse Overheid als trust anchor. Alle sleutels kloppen, alle subordinate statements zijn geldig.",
+      desc: "Volledig geldige trust chain. De leaf is geregistreerd bij Surf, en Surf is geregistreerd bij de Nederlandse Overheid als trust anchor. Alle sleutels kloppen en alle subordinate statements zijn geldig en niet verlopen. Dit is het referentiescenario.",
       credentialType: "DiplomaCertificate"
     },
     {
@@ -552,9 +553,10 @@
         { label: "HBO-raad", type: "inter" },
         { label: "Nederlandse Overheid", type: "anchor" }
       ],
-      desc: "Een tweede geldig trust pad onder dezelfde trust anchor. Toont dat meerdere intermediates onafhankelijk van elkaar kunnen opereren binnen dezelfde federatie.",
+      desc: "Een tweede geldig trust pad via een andere intermediate, onder dezelfde trust anchor. Toont dat meerdere intermediates onafhankelijk naast elkaar kunnen opereren binnen dezelfde federatie. De wallet moet beide paden accepteren.",
       credentialType: "DiplomaCertificate"
     },
+    // ── Chain resolution fouten ─────────────────────────────────────────────
     {
       id: 3,
       title: "Rogue issuer — niet in de federatie",
@@ -562,10 +564,10 @@
       issuer: "rogue",
       chain: [
         { label: "Onbekende Instelling", type: "cross" },
-        { label: "Intermediate", type: "inter" },
+        { label: "Surf", type: "inter" },
         { label: "Nederlandse Overheid", type: "anchor" }
       ],
-      desc: "De issuer heeft een eigen entity configuration, maar geen enkele intermediate heeft een subordinate statement over hem gepubliceerd. De chain resolution mislukt: intermediate geeft 404 terug op het fetch endpoint.",
+      desc: "De issuer heeft een eigen entity configuration en verwijst naar Surf als authority hint, maar Surf heeft géén subordinate statement over hem gepubliceerd. Surf's fetch endpoint geeft 404 terug. Chain resolution mislukt: er is geen aantoonbare registratie.",
       credentialType: "DiplomaCertificate"
     },
     {
@@ -578,9 +580,10 @@
         { label: "Surf", type: "inter" },
         { label: "Nederlandse Overheid", type: "anchor" }
       ],
-      desc: "De issuer is ooit opgenomen in de federatie, maar het subordinate statement van Surf is verlopen (exp ligt 1 uur in het verleden). Bij chain resolution wordt dit statement opgehaald en direct afgewezen door de validator.",
+      desc: "De issuer zit technisch gezien in de federatie, maar het subordinate statement van Surf is verlopen (exp lag 1 uur in het verleden). Bij chain resolution wordt dit statement opgehaald en direct afgewezen op exp-claim. De registratie is verlopen.",
       credentialType: "DiplomaCertificate"
     },
+    // ── Sleutelfouten ───────────────────────────────────────────────────────
     {
       id: 5,
       title: "Verkeerde sleutel in subordinate statement",
@@ -591,7 +594,132 @@
         { label: "Surf", type: "inter" },
         { label: "Nederlandse Overheid", type: "anchor" }
       ],
-      desc: "De trust chain is technisch geldig — intermediate heeft een subordinate statement gepubliceerd. Maar de vc_issuer.jwks in dat statement bevat een andere public key dan waarmee de credential daadwerkelijk is ondertekend. Signatuurverificatie faalt.",
+      desc: "De trust chain is structureel geldig en niet verlopen. Maar Surf registreert in vc_issuer.jwks een andere public key dan waarmee de leaf zijn credential daadwerkelijk ondertekent. De signatuurverificatie mislukt: de credential is gesigneerd met een sleutel die de federatie niet kent.",
+      credentialType: "DiplomaCertificate"
+    },
+    // ── Authority hints ─────────────────────────────────────────────────────
+    {
+      id: 9,
+      title: "Twee authority hints — één kapot, één geldig",
+      valid: true,
+      issuer: "leaf-multihint",
+      chain: [
+        { label: "Hogeschool Veelpad", type: "leaf" },
+        { label: "Niet-bestaande intermediate", type: "cross" },
+        { label: "Surf (geldig pad)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De leaf heeft twee authority_hints: één verwijst naar een niet-bestaande intermediate (404), één naar Surf. De resolver moet robuust zijn: bij falen van de eerste hint doorgaan naar de tweede. Als de wallet dit correct implementeert, wordt de chain via Surf alsnog gevonden en slaagt verificatie.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 10,
+      title: "Twee authority hints — beide ongeldig",
+      valid: false,
+      issuer: "leaf-nohint",
+      chain: [
+        { label: "Hogeschool Geenpad", type: "cross" },
+        { label: "Niet-bestaande inter. 1", type: "cross" },
+        { label: "Niet-bestaande inter. 2", type: "cross" }
+      ],
+      desc: "De leaf verwijst via authority_hints naar twee niet-bestaande intermediates. Geen enkel pad leidt naar de trust anchor. Chain resolution mislukt volledig: er is geen aantoonbare registratie via enig geldig pad.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 11,
+      title: "Geldig credential — verkeerd trust anchor opgegeven",
+      valid: false,
+      issuer: "leaf",
+      anchorPath: "/rogue",
+      chain: [
+        { label: "Hogeschool Utrecht", type: "leaf" },
+        { label: "Surf", type: "inter" },
+        { label: "Verkeerd anchor ❌", type: "cross" }
+      ],
+      desc: "De credential en chain zijn correct (zie scenario 1), maar de verifier geeft een ander trust anchor op dan het echte anchor. De chain eindigt niet bij het verwachte anchor: verificatie faalt. Gebruik dit JWT samen met het aangegeven (foute) anchor-URL in je wallet.",
+      credentialType: "DiplomaCertificate"
+    },
+    // ── Claim-integriteitsfouten ─────────────────────────────────────────────
+    {
+      id: 12,
+      title: "Sub-claim in subordinate statement klopt niet",
+      valid: false,
+      issuer: "leaf-subwrong",
+      chain: [
+        { label: "Verkeerde Sub", type: "cross" },
+        { label: "Surf", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate heeft een subordinate statement gepubliceerd voor deze leaf, maar de sub-claim in dat statement bevat een verkeerde entity-id. Een correcte verifier moet controleren dat sub in het subordinate statement overeenkomt met de iss van de leaf's entity configuration.",
+      credentialType: "DiplomaCertificate"
+    },
+    // ── Toekomstig: metadata_policy ─────────────────────────────────────────
+    {
+      id: 6,
+      title: "Metadata policy — niet-toegestaan credential type",
+      valid: false,
+      issuer: "leaf-policy-type",
+      chain: [
+        { label: "Leaf (beperkt type)", type: "cross" },
+        { label: "Intermediate (policy)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate beperkt via metadata_policy welke credential types de leaf mag uitgeven (subset-operator). De leaf geeft een DiplomaCertificate uit dat buiten deze policy valt. Een correcte verifier evalueert metadata_policy en weigert de credential.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 7,
+      title: "Metadata policy — JWKS overschreven door intermediate",
+      valid: false,
+      issuer: "leaf-policy-jwks",
+      chain: [
+        { label: "Leaf (eigen sleutel)", type: "cross" },
+        { label: "Intermediate (override)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate overschrijft via metadata_policy de vc_issuer.jwks van de leaf (value-operator). De leaf signeert de credential met zijn eigen sleutel, maar de federatie schrijft een andere sleutel voor. Signatuurverificatie moet mislukken.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 8,
+      title: "Metadata policy — onbekende kritische operator",
+      valid: false,
+      issuer: "leaf-policy-crit",
+      chain: [
+        { label: "Leaf", type: "cross" },
+        { label: "Intermediate (crit-operator)", type: "inter" },
+        { label: "Nederlandse Overheid", type: "anchor" }
+      ],
+      desc: "De intermediate gebruikt metadata_policy_crit met een operator die de verifier niet kent. Volgens de OpenID Federation spec moet verificatie in dat geval altijd mislukken, ook als de rest van de chain geldig is.",
+      credentialType: "DiplomaCertificate"
+    },
+    // ── Toekomstig: chain-diepte & constraints ──────────────────────────────
+    {
+      id: 13,
+      title: "Chain te diep (depth > MAX)",
+      valid: false,
+      issuer: "leaf-deep",
+      chain: [
+        { label: "Leaf", type: "cross" },
+        { label: "Inter 3", type: "inter" },
+        { label: "Inter 2", type: "inter" },
+        { label: "Inter 1", type: "inter" },
+        { label: "Anchor", type: "anchor" }
+      ],
+      desc: "Een chain van meer dan de maximale diepte (standaard 5 stappen). Een correcte resolver moet een maximale chain-lengte afdwingen om circulaire verwijzingen of aanvalspaden te voorkomen.",
+      credentialType: "DiplomaCertificate"
+    },
+    {
+      id: 14,
+      title: "Constraints — max_path_length overschreden",
+      valid: false,
+      issuer: "leaf-maxpath",
+      chain: [
+        { label: "Leaf", type: "cross" },
+        { label: "Intermediate", type: "inter" },
+        { label: "Anchor (max=0)", type: "anchor" }
+      ],
+      desc: "De trust anchor plaatst constraints.max_path_length: 0 in zijn subordinate statement, wat betekent dat géén intermediates zijn toegestaan. Er zit toch een intermediate in de chain. De verifier moet dit constraints-veld controleren en de chain afwijzen.",
       credentialType: "DiplomaCertificate"
     }
   ];

@@ -76,13 +76,6 @@ public class FederationController {
         }
         String url = baseUrl + "/" + entity + "/fetch?sub=" + subjectEntityId;
 
-        // Alleen intermediates (entiteiten met subordinate statements) bedienen fetch
-        if (!java.util.Set.of("anchor", "intermediate", "intermediate2").contains(entity)) {
-            liveTracker.broadcast(DemoEvent.httpCallFailed(url, 404,
-                    entity + " heeft geen fetch endpoint (geen intermediate)"));
-            return ResponseEntity.notFound().build();
-        }
-
         String issuerEntityId = baseUrl + "/" + entity;
         String jwt = entityStore.getSubordinateStatement(issuerEntityId, subjectEntityId);
         if (jwt == null) {
