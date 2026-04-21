@@ -197,7 +197,7 @@ body {
   50%       { box-shadow: 0 0 0 4px #f59e0b11; }
 }
 
-/* Role accent bar */
+/* Role accent bar — dim by default, only role-anchor/bad keep full color */
 .node::before {
   content: '';
   position: absolute;
@@ -208,12 +208,15 @@ body {
   background: var(--border2);
   transition: background .35s;
 }
+/* Anchor and known-bad always show their role color */
 .node.role-anchor::before  { background: var(--amber); }
-.node.role-inter::before   { background: var(--blue); }
-.node.role-leaf::before    { background: var(--cyan); }
-.node.role-bad::before     { background: var(--red); }
-.node.pass::before         { background: var(--green); }
-.node.fail::before         { background: var(--red); }
+.node.role-bad::before     { background: #5a1a1a; }
+/* Intermediates and leaves: dim until validated */
+.node.role-inter::before   { background: #1a2d4a; }
+.node.role-leaf::before    { background: #1a2d3a; }
+/* After validation: override with result color */
+.node.pass::before         { background: var(--green) !important; }
+.node.fail::before         { background: var(--red)   !important; }
 
 .node-role {
   font-size: 0.62rem;
@@ -222,10 +225,13 @@ body {
   letter-spacing: .1em;
   color: var(--text-dim);
 }
+/* Role label colors: dim for leaf/inter until validated */
 .node.role-anchor .node-role { color: var(--amber); }
-.node.role-inter  .node-role { color: var(--blue); }
-.node.role-leaf   .node-role { color: var(--cyan); }
-.node.role-bad    .node-role { color: var(--red); }
+.node.role-inter  .node-role { color: #3a5a7a; }
+.node.role-leaf   .node-role { color: #2a4a5a; }
+.node.role-bad    .node-role { color: #6a2a2a; }
+/* After validation: restore readable colors */
+.node.pass .node-role, .node.fail .node-role { color: var(--text-dim); }
 
 .node-abbr {
   font-size: 1.5rem;
@@ -548,12 +554,20 @@ body {
   <div class="hdr-spacer"></div>
   <div class="hdr-legend">
     <span><span class="leg-dot" style="background:var(--amber)"></span>Trust Anchor</span>
-    <span><span class="leg-dot" style="background:var(--blue)"></span>Intermediate</span>
-    <span><span class="leg-dot" style="background:var(--cyan)"></span>Leaf (OP/RP/AS)</span>
+    <span><span class="leg-dot" style="background:#1a2d4a;border:1px solid #243652"></span>Intermediate</span>
+    <span><span class="leg-dot" style="background:#1a2d3a;border:1px solid #243652"></span>Leaf</span>
+    <span><span class="leg-dot" style="background:var(--border2)"></span>Niet gevalideerd</span>
     <span><span class="leg-dot" style="background:var(--green)"></span>Geslaagd</span>
     <span><span class="leg-dot" style="background:var(--red)"></span>Mislukt</span>
   </div>
-  <button class="btn-run" id="btnRun" onclick="runAll()">▶ Controleer alles</button>
+  <div id="runSummary" style="font-size:.72rem;font-family:'Fira Code',monospace;color:var(--text-dim);display:none;">
+    <span id="sumPassed" style="color:var(--green)">0 ✓</span>
+    <span style="color:var(--border2)"> / </span>
+    <span id="sumFailed" style="color:var(--red)">0 ✗</span>
+    <span style="color:var(--border2)"> / </span>
+    <span id="sumTotal" style="color:var(--text-dim)">0 totaal</span>
+  </div>
+  <button class="btn-run" id="btnRun" onclick="runAll()">▶ Valideer trust chains</button>
 </header>
 
 <!-- ── Main ── -->
@@ -573,7 +587,12 @@ body {
           <div class="node-role">Trust Anchor</div>
           <div class="node-abbr">TA</div>
           <div class="node-name">Nederlandse Overheid</div>
-          <div class="node-ep" id="ep-anchor">/anchor/.well-known/openid-federation</div>
+          <div style="margin-top:4px;display:flex;flex-direction:column;gap:2px;">
+            <div style="font-size:.58rem;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Fira Code',monospace;">Entity config</div>
+            <div class="node-ep" id="ep-anchor">/anchor/.well-known/openid-federation</div>
+            <div style="font-size:.58rem;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Fira Code',monospace;margin-top:3px;">Fetch endpoint</div>
+            <div class="node-ep" id="ep-anchor-fetch">/anchor/fetch?sub=…</div>
+          </div>
         </div>
       </div>
 
@@ -739,6 +758,50 @@ body {
             <div class="node-ep" id="ep-leaf-maxpath">/leaf-maxpath/.well-known/openid-federation</div>
             <div class="node-badge">S14</div>
           </div>
+          <div class="node role-bad" id="node-leaf-wronganchor"
+               data-slug="leaf" data-name="Verkeerd trust anchor" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="false" data-scenario="11"
+               onclick="selectNode('leaf-wronganchor')" onmouseenter="showTip(event,'leaf-wronganchor')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Verkeerd anchor</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Verkeerd trust anchor</div>
+            <div class="node-ep" id="ep-leaf-wronganchor">/leaf/.well-known/openid-federation</div>
+            <div class="node-badge">S11</div>
+          </div>
+          <div class="node role-leaf" id="node-leaf-policy-type-ok"
+               data-slug="leaf-policy-type-ok" data-name="Policy: Type toegestaan" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="true" data-scenario="15"
+               onclick="selectNode('leaf-policy-type-ok')" onmouseenter="showTip(event,'leaf-policy-type-ok')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Policy ✓</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Policy: Type toegestaan</div>
+            <div class="node-ep" id="ep-leaf-policy-type-ok">/leaf-policy-type-ok/.well-known/openid-federation</div>
+            <div class="node-badge">S15</div>
+          </div>
+          <div class="node role-leaf" id="node-leaf-policy-jwks-ok"
+               data-slug="leaf-policy-jwks-ok" data-name="Policy: JWKS geldig" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="true" data-scenario="16"
+               onclick="selectNode('leaf-policy-jwks-ok')" onmouseenter="showTip(event,'leaf-policy-jwks-ok')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Policy ✓</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Policy: JWKS geldig</div>
+            <div class="node-ep" id="ep-leaf-policy-jwks-ok">/leaf-policy-jwks-ok/.well-known/openid-federation</div>
+            <div class="node-badge">S16</div>
+          </div>
+          <div class="node role-leaf" id="node-leaf-policy-crit-ok"
+               data-slug="leaf-policy-crit-ok" data-name="Policy: Crit operator OK" data-role="OP / Leaf" data-abbr="OP"
+               data-valid="true" data-scenario="17"
+               onclick="selectNode('leaf-policy-crit-ok')" onmouseenter="showTip(event,'leaf-policy-crit-ok')" onmouseleave="hideTip()">
+            <div class="node-status-dot"></div>
+            <div class="node-role">Leaf · Policy ✓</div>
+            <div class="node-abbr">OP</div>
+            <div class="node-name">Policy: Crit operator OK</div>
+            <div class="node-ep" id="ep-leaf-policy-crit-ok">/leaf-policy-crit-ok/.well-known/openid-federation</div>
+            <div class="node-badge">S17</div>
+          </div>
         </div>
       </div>
 
@@ -768,9 +831,50 @@ body {
 <script>
 let baseUrl = '';
 let selectedSlug = null;
-const nodeResults = {};
+const nodeResults   = {};  // slug → true|false|undefined
+const nodeScenario  = {};  // slug → full scenario run result object
 
-// ── Parent relationships for subordinate statement endpoints ──
+// ── Trust anchor path per node (null = geen geldig chain pad) ──
+const ANCHOR_FOR = {
+  'leaf':                '/anchor',
+  'leaf2':               '/anchor',
+  'leaf-expired':        '/anchor',
+  'leaf-wrongkey':       '/anchor',
+  'leaf-subwrong':       '/anchor',
+  'leaf-multihint':      '/anchor',
+  'leaf-policy-type':    '/anchor',
+  'leaf-policy-jwks':    '/anchor',
+  'leaf-policy-type-ok': '/anchor',
+  'leaf-policy-jwks-ok': '/anchor',
+  'leaf-policy-crit-ok': '/anchor',
+  'leaf-deep':           '/anchor',
+  'leaf-maxpath':        '/anchor',
+  'leaf-wronganchor':    '/rogue',   // scenario 11: bewust verkeerd anchor
+  'rogue':               null,       // niet in federatie
+  'leaf-nohint':         null,       // geen geldig hint pad
+};
+
+// ── Scenario IDs per node-id (node-id !== always slug for special cases) ──
+const SCENARIO_ID = {
+  'leaf':                1,
+  'leaf2':               2,
+  'rogue':               3,
+  'leaf-expired':        4,
+  'leaf-wrongkey':       5,
+  'leaf-policy-type':    6,
+  'leaf-policy-jwks':    7,
+  'leaf-multihint':      9,
+  'leaf-nohint':         10,
+  'leaf-wronganchor':    11,  // same slug as leaf but different anchor
+  'leaf-subwrong':       12,
+  'leaf-deep':           13,
+  'leaf-maxpath':        14,
+  'leaf-policy-type-ok': 15,
+  'leaf-policy-jwks-ok': 16,
+  'leaf-policy-crit-ok': 17,
+};
+
+// ── Parent relationships (for display of fetch endpoint) ──
 const PARENTS = {
   'anchor':           null,
   'intermediate':     'anchor',
@@ -783,29 +887,15 @@ const PARENTS = {
   'leaf-multihint':   'intermediate',
   'leaf-nohint':      null,
   'rogue':            null,
-  'leaf-policy-type': 'intermediate',
-  'leaf-policy-jwks': 'intermediate',
-  'leaf-deep':        'inter-depth-1',
-  'leaf-maxpath':     'intermediate-maxpath',
+  'leaf-policy-type':    'intermediate',
+  'leaf-policy-jwks':    'intermediate',
+  'leaf-deep':           'inter-depth-1',
+  'leaf-maxpath':        'intermediate-maxpath',
+  'leaf-wronganchor':    'intermediate',
+  'leaf-policy-type-ok': 'intermediate',
+  'leaf-policy-jwks-ok': 'intermediate',
+  'leaf-policy-crit-ok': 'intermediate',
 };
-
-const SCENARIO_DESC = {
-  'leaf':             'Volledig geldig pad via Surf naar de Nederlandse Overheid.',
-  'leaf2':            'Tweede geldig pad via HBO-raad naar dezelfde trust anchor.',
-  'rogue':            'Issuer heeft geen subordinate statement bij de intermediate — niet in de federatie.',
-  'leaf-expired':     'Subordinate statement van Surf is verlopen (exp lag in het verleden).',
-  'leaf-wrongkey':    'Surf registreert een andere public key dan waarmee de leaf ondertekent.',
-  'leaf-subwrong':    'Sub-claim in subordinate statement komt niet overeen met de leaf entity-id.',
-  'leaf-multihint':   'Twee authority_hints: één 404, één geldig. Resolver vindt het geldige pad.',
-  'leaf-nohint':      'Beide authority_hints verwijzen naar niet-bestaande intermediates.',
-  'leaf-policy-type': 'Metadata policy beperkt credential_types_supported — DiplomaCertificate valt er uit.',
-  'leaf-policy-jwks': 'Policy value overschrijft vc_issuer.jwks met een andere sleutel.',
-  'leaf-deep':        'Chain via 6 intermediates — overschrijdt MAX_HOPS (5).',
-  'leaf-maxpath':     'Trust anchor stelt max_path_length=0 in, maar er zit een intermediate tussen.',
-};
-
-const CAN_ISSUE = new Set(['leaf','leaf2','rogue','leaf-expired','leaf-wrongkey','leaf-subwrong',
-  'leaf-multihint','leaf-nohint','leaf-policy-type','leaf-policy-jwks','leaf-deep','leaf-maxpath']);
 
 // ── Connections: [parent-slug, child-slug] ──
 const EDGES = [
@@ -820,45 +910,25 @@ const EDGES = [
   ['intermediate2','leaf2'],
 ];
 
-// ── JWT helpers ──
+const CAN_ISSUE = new Set(Object.keys(SCENARIO_ID).filter(k => k !== 'leaf-wronganchor'));
+
+// ── Helpers ──
 function decodePayload(jwt) {
-  try {
-    const part = jwt.split('.')[1];
-    return JSON.parse(atob(part.replace(/-/g,'+').replace(/_/g,'/')));
-  } catch { return null; }
+  try { return JSON.parse(atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); }
+  catch { return null; }
 }
 function fmtExp(epoch) {
   if (!epoch) return '?';
-  return new Date(epoch * 1000).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return new Date(epoch*1000).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
-function isExpired(epoch) { return epoch && epoch < Math.floor(Date.now()/1000); }
+function isExpired(e) { return e && e < Math.floor(Date.now()/1000); }
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Fetch helpers ──
-async function fetchEntityConfig(slug) {
-  try {
-    const r = await fetch(`/${slug}/.well-known/openid-federation`);
-    if (!r.ok) return { ok: false, status: r.status };
-    const jwt = await r.text();
-    return { ok: true, jwt, payload: decodePayload(jwt) };
-  } catch (e) { return { ok: false, error: e.message }; }
-}
-
-async function fetchSubStatement(issuerSlug, subjectSlug) {
-  const subUrl = encodeURIComponent(baseUrl + '/' + subjectSlug);
-  try {
-    const r = await fetch(`/${issuerSlug}/fetch?sub=${subUrl}`);
-    if (!r.ok) return { ok: false, status: r.status };
-    const jwt = await r.text();
-    return { ok: true, jwt, payload: decodePayload(jwt) };
-  } catch (e) { return { ok: false, error: e.message }; }
-}
-
-// ── Node status update ──
-function setNodeStatus(slug, status) { // 'checking' | 'pass' | 'fail' | 'reset'
+// ── Node status ──
+function setNodeStatus(slug, status) {
   const el = document.getElementById('node-' + slug);
   if (!el) return;
   el.classList.remove('checking','pass','fail');
@@ -868,70 +938,126 @@ function setNodeStatus(slug, status) { // 'checking' | 'pass' | 'fail' | 'reset'
 }
 
 function updateEdgeColors() {
-  document.querySelectorAll('#connSvg line, #connSvg path').forEach(el => {
+  document.querySelectorAll('#connSvg path').forEach(el => {
     el.classList.remove('pass','fail');
     const [a, b] = (el.dataset.edge || '').split('→');
     if (!a || !b) return;
-    const aRes = nodeResults[a], bRes = nodeResults[b];
-    if (aRes === true && bRes === true) el.classList.add('pass');
-    else if (aRes === false || bRes === false) el.classList.add('fail');
+    const aOk = nodeResults[a], bOk = nodeResults[b];
+    if (aOk === true && bOk === true)  el.classList.add('pass');
+    else if (aOk === false || bOk === false) el.classList.add('fail');
   });
 }
 
-// ── Check single node ──
-async function checkNode(slug) {
+// ── Run scenario via backend API (for leaf nodes) ──
+async function runScenario(scenarioId) {
+  const r = await fetch(`/test-scenarios/${scenarioId}/run?includeCredential=false`, { method:'POST' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ── Check infrastructure node (anchor / intermediate) via entity config ──
+async function checkInfraNode(slug) {
   setNodeStatus(slug, 'checking');
-  const result = await fetchEntityConfig(slug);
-  nodeResults[slug] = result.ok;
-
   let checks = [];
-  const p = result.payload;
-
-  if (!result.ok) {
-    checks.push({ type:'fail', text: `Entity config niet bereikbaar (HTTP ${result.status || result.error})` });
-    setNodeStatus(slug, 'fail');
-  } else {
-    checks.push({ type:'ok', text: `Entity config bereikbaar` });
+  try {
+    const r = await fetch(`/${slug}/.well-known/openid-federation`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const jwt = await r.text();
+    const p = decodePayload(jwt);
+    checks.push({ type:'ok', text:'Entity config bereikbaar' });
+    if (p?.iss) checks.push({ type:'ok', text:`iss: ${p.iss}` });
     const exp = p?.exp;
     if (exp) {
-      if (isExpired(exp)) checks.push({ type:'fail', text: `Config verlopen: ${fmtExp(exp)}` });
-      else checks.push({ type:'ok', text: `Config geldig t/m ${fmtExp(exp)}` });
-    }
-    if (p?.iss) checks.push({ type:'ok', text: `iss: ${p.iss}` });
-    if (p?.authority_hints?.length) {
-      checks.push({ type:'warn', text: `authority_hints: ${p.authority_hints.length}x` });
-    }
-
-    // Check sub statement
-    const parentSlug = PARENTS[slug];
-    if (parentSlug) {
-      const subRes = await fetchSubStatement(parentSlug, slug);
-      if (!subRes.ok) {
-        checks.push({ type:'fail', text: `Subordinate stmt van ${parentSlug}: HTTP ${subRes.status || 404}` });
-        setNodeStatus(slug, 'fail');
+      if (isExpired(exp)) {
+        checks.push({ type:'fail', text:`Config verlopen: ${fmtExp(exp)}` });
+        nodeResults[slug] = false;
       } else {
-        checks.push({ type:'ok', text: `Subordinate stmt van ${parentSlug} aanwezig` });
-        const sp = subRes.payload;
-        if (sp?.exp) {
-          if (isExpired(sp.exp)) {
-            checks.push({ type:'fail', text: `Sub stmt verlopen: ${fmtExp(sp.exp)}` });
-            setNodeStatus(slug, 'fail');
-          } else {
-            checks.push({ type:'ok', text: `Sub stmt geldig t/m ${fmtExp(sp.exp)}` });
-            if (nodeResults[slug] !== false) setNodeStatus(slug, 'pass');
-          }
-        } else {
-          if (nodeResults[slug] !== false) setNodeStatus(slug, 'pass');
-        }
+        checks.push({ type:'ok', text:`Config geldig t/m ${fmtExp(exp)}` });
+        nodeResults[slug] = true;
       }
     } else {
-      if (nodeResults[slug] !== false) setNodeStatus(slug, 'pass');
+      nodeResults[slug] = true;
     }
+    if (p?.authority_hints?.length) {
+      p.authority_hints.forEach(h => checks.push({ type:'warn', text:`authority_hint: ${h}` }));
+    }
+    // For intermediates: also verify their subordinate statement from anchor
+    const parentSlug = PARENTS[slug];
+    if (parentSlug) {
+      const sub = encodeURIComponent(baseUrl + '/' + slug);
+      const sr = await fetch(`/${parentSlug}/fetch?sub=${sub}`);
+      if (!sr.ok) {
+        checks.push({ type:'fail', text:`Subordinate stmt van ${parentSlug}: HTTP ${sr.status}` });
+        nodeResults[slug] = false;
+      } else {
+        const sjwt = await sr.text();
+        const sp = decodePayload(sjwt);
+        checks.push({ type:'ok', text:`Subordinate stmt van ${parentSlug} aanwezig` });
+        if (sp?.exp && isExpired(sp.exp)) {
+          checks.push({ type:'fail', text:`Sub stmt verlopen: ${fmtExp(sp.exp)}` });
+          nodeResults[slug] = false;
+        } else if (sp?.exp) {
+          checks.push({ type:'ok', text:`Sub stmt geldig t/m ${fmtExp(sp.exp)}` });
+        }
+      }
+    }
+  } catch(e) {
+    checks.push({ type:'fail', text:e.message });
+    nodeResults[slug] = false;
   }
-
   nodeResults[slug + '__checks'] = checks;
-  if (selectedSlug === slug) refreshPanel(slug);
-  return result;
+  setNodeStatus(slug, nodeResults[slug] ? 'pass' : 'fail');
+}
+
+// ── Check leaf node: run the actual trust chain scenario ──
+// nodeId is the HTML element id suffix (may differ from slug for special cases like leaf-wronganchor)
+async function checkLeafNode(nodeId) {
+  const slug = nodeId;
+  setNodeStatus(nodeId, 'checking');
+  const scenarioId = SCENARIO_ID[nodeId];
+  let checks = [];
+  try {
+    const result = await runScenario(scenarioId);
+    nodeScenario[slug] = result;
+
+    // Entity config reachable?
+    checks.push({ type:'ok', text:`Scenario #${result.id}: "${result.title}"` });
+
+    if (result.trace?.entityConfigurationUrl) {
+      checks.push({ type:'ok', text:`Entity config: ${result.trace.entityConfigurationUrl}` });
+    }
+
+    if (result.trace?.authorityHints?.length) {
+      result.trace.authorityHints.forEach(h =>
+        checks.push({ type:'warn', text:`authority_hint: ${h}` })
+      );
+    }
+
+    if (result.trace?.expectedFetchCalls?.length) {
+      result.trace.expectedFetchCalls.forEach(url =>
+        checks.push({ type:'ok', text:`fetch: ${url}` })
+      );
+    }
+
+    if (result.trace?.policySummary) {
+      checks.push({ type:'warn', text:`Policy: ${result.trace.policySummary}` });
+    }
+
+    if (result.error) {
+      checks.push({ type:'fail', text:`Fout: ${result.error}` });
+    }
+
+    // passed = actualTrusted matches expectedTrusted
+    const statusOk = result.passed;
+    nodeResults[nodeId] = statusOk;
+    setNodeStatus(nodeId, statusOk ? 'pass' : 'fail');
+  } catch(e) {
+    checks.push({ type:'fail', text:`Scenario run mislukt: ${e.message}` });
+    nodeResults[nodeId] = false;
+    setNodeStatus(nodeId, 'fail');
+  }
+  nodeResults[nodeId + '__checks'] = checks;
+  if (selectedSlug === nodeId) refreshPanel(nodeId);
 }
 
 // ── Run all ──
@@ -940,26 +1066,38 @@ async function runAll() {
   btn.textContent = '⏳ Bezig…';
   btn.classList.add('running');
   btn.disabled = true;
+  document.getElementById('runSummary').style.display = 'none';
 
   const allSlugs = Array.from(document.querySelectorAll('.node[data-slug]')).map(n => n.dataset.slug);
-  // Reset all
-  allSlugs.forEach(s => { setNodeStatus(s,'reset'); nodeResults[s] = undefined; });
+  allSlugs.forEach(s => { setNodeStatus(s,'reset'); nodeResults[s] = undefined; delete nodeScenario[s]; });
 
-  // Check anchors first, then intermediates, then leaves
-  const order = ['anchor','intermediate','intermediate2',
-    'leaf','leaf2','leaf-expired','leaf-wrongkey','leaf-subwrong','leaf-multihint','leaf-nohint',
-    'rogue','leaf-policy-type','leaf-policy-jwks','leaf-deep','leaf-maxpath'];
-
-  for (const slug of order) {
-    if (allSlugs.includes(slug)) await checkNode(slug);
+  // Infrastructure nodes first (sequential to avoid race)
+  for (const slug of ['anchor','intermediate','intermediate2']) {
+    if (allSlugs.includes(slug)) await checkInfraNode(slug);
   }
 
-  btn.textContent = '▶ Controleer alles';
+  // Leaf nodes — run in parallel
+  const leafNodeIds = Array.from(document.querySelectorAll('.node[data-scenario]'))
+    .map(n => n.id.replace('node-',''))
+    .filter(id => SCENARIO_ID[id] !== undefined);
+  await Promise.all(leafNodeIds.map(id => checkLeafNode(id)));
+
+  // Summary
+  const passed = allSlugs.filter(s => nodeResults[s] === true).length;
+  const failed = allSlugs.filter(s => nodeResults[s] === false).length;
+  document.getElementById('sumPassed').textContent = passed + ' ✓';
+  document.getElementById('sumFailed').textContent = failed + ' ✗';
+  document.getElementById('sumTotal').textContent  = allSlugs.length + ' totaal';
+  document.getElementById('runSummary').style.display = 'flex';
+  document.getElementById('runSummary').style.gap = '6px';
+  document.getElementById('runSummary').style.alignItems = 'center';
+
+  btn.textContent = '↺ Opnieuw valideren';
   btn.classList.remove('running');
   btn.disabled = false;
 }
 
-// ── Select node / side panel ──
+// ── Select node ──
 function selectNode(slug) {
   if (selectedSlug) {
     const prev = document.getElementById('node-' + selectedSlug);
@@ -971,6 +1109,7 @@ function selectNode(slug) {
   refreshPanel(slug);
 }
 
+// ── Side panel ──
 function refreshPanel(slug) {
   const el = document.getElementById('node-' + slug);
   if (!el) return;
@@ -980,110 +1119,174 @@ function refreshPanel(slug) {
   const status = nodeResults[slug];
   const expectedValid = el.dataset.valid;
   const scenario = el.dataset.scenario;
+  const scenResult = nodeScenario[slug];
 
   document.getElementById('spEmpty').style.display = 'none';
   const spContent = document.getElementById('spContent');
   spContent.style.display = 'flex';
-
   document.getElementById('spTitle').textContent = name;
   document.getElementById('spRole').textContent = role + (scenario ? ` · Scenario ${scenario}` : '');
 
-  const ecUrl = baseUrl + `/${slug}/.well-known/openid-federation`;
+  const ecUrl    = baseUrl + `/${slug}/.well-known/openid-federation`;
+  const listUrl  = baseUrl + `/${slug}/list`;
   const parentSlug = PARENTS[slug];
-  const fetchUrl = parentSlug ? `${baseUrl}/${parentSlug}/fetch?sub=${encodeURIComponent(baseUrl+'/'+slug)}` : null;
+  const fetchUrl = parentSlug
+    ? `${baseUrl}/${parentSlug}/fetch?sub=${encodeURIComponent(baseUrl+'/'+slug)}`
+    : null;
 
+  // Status bar
   let statusHtml = '';
   if (status === undefined) {
-    statusHtml = `<div class="sp-status-row pending">⏺ Nog niet gecontroleerd</div>`;
+    statusHtml = `<div class="sp-status-row pending">⏺ Nog niet gevalideerd — klik "Valideer trust chains"</div>`;
   } else if (status === true) {
-    statusHtml = `<div class="sp-status-row pass">✓ Entity config bereikbaar</div>`;
+    const label = scenResult
+      ? (scenResult.passed ? `✓ Scenario geslaagd — verwacht: ${scenResult.expectedTrusted ? 'geldig' : 'ongeldig'}, actueel: ${scenResult.actualTrusted ? 'geldig' : 'ongeldig'}` : '✓ Bereikbaar')
+      : '✓ Bereikbaar en geldig';
+    statusHtml = `<div class="sp-status-row pass">${label}</div>`;
   } else {
-    statusHtml = `<div class="sp-status-row fail">✗ Verificatie mislukt</div>`;
+    const errMsg = scenResult?.error ? esc(scenResult.error.substring(0,100)) : 'Zie controle resultaten';
+    statusHtml = `<div class="sp-status-row fail">✗ Mislukt — ${errMsg}</div>`;
   }
 
+  // Expected / actual result
+  let expectedHtml = '';
+  if (expectedValid !== undefined && scenResult) {
+    const exp = scenResult.expectedTrusted;
+    const act = scenResult.actualTrusted;
+    expectedHtml = `
+      <div style="display:flex;gap:8px;font-size:.75rem;font-weight:700;">
+        <span style="color:${exp?'var(--green)':'var(--red)'}">Verwacht: ${exp?'✅ geldig':'❌ ongeldig'}</span>
+        <span style="color:var(--border2)">→</span>
+        <span style="color:${act?'var(--green)':'var(--red)'}">Actueel: ${act?'✅ geldig':'❌ ongeldig'}</span>
+        <span style="color:${scenResult.passed?'var(--green)':'var(--red)'};">${scenResult.passed?'· TEST GESLAAGD':'· TEST MISLUKT'}</span>
+      </div>`;
+  } else if (expectedValid !== undefined) {
+    const v = expectedValid === 'true';
+    expectedHtml = `<div style="font-size:.72rem;color:${v?'var(--green)':'var(--red)'};font-weight:700;">${v?'✅ Verwacht: geldig':'❌ Verwacht: ongeldig'}</div>`;
+  }
+
+  // Checks / trace
   let checksHtml = '';
   if (checks.length) {
     checksHtml = `<div>
-      <div class="sp-section-label">Controle resultaten</div>
+      <div class="sp-section-label">Trace / controle resultaten</div>
       <div class="check-result">
         ${checks.map(c => `<div class="cr-row"><span class="cr-${c.type}">${c.type==='ok'?'✓':c.type==='fail'?'✗':'⚠'}</span><span class="cr-dim">${esc(c.text)}</span></div>`).join('')}
       </div>
     </div>`;
   }
 
-  let descHtml = '';
-  const desc = SCENARIO_DESC[slug];
-  if (desc) {
-    descHtml = `<div style="font-size:.78rem;color:var(--text-mid);line-height:1.6;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;">${esc(desc)}</div>`;
+  // Endpoints section
+  const copyEc  = `<button class="copy-btn" onclick="copyText('${ecUrl}', this)">kopieer</button>`;
+  const copyList = `<button class="copy-btn" onclick="copyText('${listUrl}', this)">kopieer</button>`;
+
+  let fetchSection = '';
+  if (fetchUrl) {
+    const safeFetchId = 'sp-fetch-' + slug.replace(/-/g,'_');
+    fetchSection = `
+      <div>
+        <div class="sp-section-label">Subordinate statement (van parent: ${esc(parentSlug)})</div>
+        <div class="sp-url-box">
+          <span class="url-label">GET /${parentSlug}/fetch?sub=…</span>
+          <span id="${safeFetchId}">${esc(fetchUrl)}</span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('${safeFetchId}').textContent, this)">kopieer</button>
+        </div>
+      </div>`;
   }
 
-  let expectedHtml = '';
-  if (expectedValid !== undefined) {
-    const v = expectedValid === 'true';
-    expectedHtml = `<div style="font-size:.72rem;color:${v?'var(--green)':'var(--red)'};font-weight:700;">
-      ${v ? '✅ Verwacht: geldig' : '❌ Verwacht: ongeldig'}
-    </div>`;
-  }
-
-  let copyBtnEc = `<button class="copy-btn" onclick="copyText('${ecUrl}', this)">kopieer</button>`;
-  let fetchSection = fetchUrl ? `
-    <div>
-      <div class="sp-section-label">Subordinate statement endpoint (van parent)</div>
-      <div class="sp-url-box">
-        <span class="url-label">/${parentSlug}/fetch?sub=…</span>
-        <span id="sp-fetch-url-${slug}">${esc(fetchUrl)}</span>
-        <button class="copy-btn" onclick="copyText(document.getElementById('sp-fetch-url-${slug}').textContent, this)">kopieer</button>
+  // Trust anchor endpoint (for anchor node)
+  let anchorFetchSection = '';
+  if (slug === 'anchor') {
+    anchorFetchSection = `
+      <div>
+        <div class="sp-section-label">Fetch endpoint (subordinates ophalen)</div>
+        <div class="sp-url-box">
+          <span class="url-label">GET /anchor/fetch?sub={entity-id}</span>
+          <span>${esc(baseUrl + '/anchor/fetch?sub=')}<span style="color:var(--text-dim)">…</span></span>
+        </div>
       </div>
-    </div>` : '';
+      <div>
+        <div class="sp-section-label">Subordinate list</div>
+        <div class="sp-url-box">
+          <span class="url-label">GET /anchor/list</span>
+          <span>${esc(baseUrl + '/anchor/list')}</span>
+          ${copyList}
+        </div>
+      </div>`;
+  }
 
+  // Trust anchor URL for this node (null = no valid chain)
+  const anchorPath = ANCHOR_FOR[slug];
+  const anchorUrl  = anchorPath ? baseUrl + anchorPath : null;
+
+  const anchorBlock = anchorUrl
+    ? `<div>
+         <div class="sp-section-label" style="color:var(--amber);">Trust Anchor — gebruik in Swagger / wallet</div>
+         <div class="sp-url-box" style="border-color:#5a3a0a;">
+           <span class="url-label">trustAnchorEntityId</span>
+           <span id="ta-url-${slug}">${esc(anchorUrl)}</span>
+           <button class="copy-btn" onclick="copyText(document.getElementById('ta-url-${slug}').textContent, this)">kopieer</button>
+         </div>
+       </div>`
+    : `<div style="padding:7px 10px;background:#1a1208;border:1px solid #5a3a0a;border-radius:5px;font-size:.72rem;color:#f59e0b;line-height:1.5;">
+         ⚠ Geen geldig trust anchor pad voor deze issuer.<br>
+         <span style="color:var(--text-dim);">JWT kan worden opgehaald maar verificatie zal altijd mislukken.</span>
+       </div>`;
+
+  // JWT section
   let jwtSection = '';
   if (CAN_ISSUE.has(slug)) {
     jwtSection = `
       <hr class="sp-divider">
       <div>
-        <div class="sp-section-label">Credential JWT ophalen</div>
+        <div class="sp-section-label">Credential JWT ophalen (/issue)</div>
+        <div style="font-size:.68rem;color:var(--text-dim);margin-bottom:6px;font-family:'Fira Code',monospace;">
+          POST /issue · issuer: ${slug} · type: DiplomaCertificate
+        </div>
         <button class="btn-get-jwt" id="jwt-btn-${slug}" onclick="fetchJwt('${slug}')">
-          ⚡ Haal JWT op via /issue
+          ⚡ Haal verse JWT op
         </button>
         <div class="jwt-output" id="jwt-box-${slug}" style="margin-top:8px;">
           <textarea class="jwt-ta" id="jwt-ta-${slug}" readonly rows="3"></textarea>
           <div class="jwt-meta" id="jwt-meta-${slug}"></div>
           <button class="btn-copy-jwt" id="jwt-copy-${slug}" onclick="copyJwt('${slug}')" disabled>📋 Kopieer JWT</button>
         </div>
-      </div>`;
+      </div>
+      ${anchorBlock}`;
   }
 
   document.getElementById('spBody').innerHTML = `
     ${statusHtml}
     ${expectedHtml}
-    ${descHtml}
     ${checksHtml}
     <hr class="sp-divider">
     <div>
       <div class="sp-section-label">Entity configuration endpoint</div>
       <div class="sp-url-box">
-        <span class="url-label">GET /{slug}/.well-known/openid-federation</span>
-        <span id="sp-ec-url-${slug}">${esc(ecUrl)}</span>
-        ${copyBtnEc}
+        <span class="url-label">GET /${slug}/.well-known/openid-federation</span>
+        ${esc(ecUrl)}
+        ${copyEc}
       </div>
     </div>
     ${fetchSection}
-    <div>
-      <div class="sp-section-label">Fetch list endpoint (subordinates)</div>
+    ${anchorFetchSection}
+    ${(['anchor','intermediate','intermediate2'].includes(slug) && !anchorFetchSection) ? `<div>
+      <div class="sp-section-label">Subordinate list endpoint</div>
       <div class="sp-url-box">
         <span class="url-label">GET /${slug}/list</span>
-        <span>${esc(baseUrl + '/' + slug + '/list')}</span>
+        ${esc(listUrl)}
+        ${copyList}
       </div>
-    </div>
+    </div>` : ''}
     ${jwtSection}
   `;
-  // Re-attach check button
 }
 
+// ── JWT fetch ──
 async function fetchJwt(slug) {
-  const btn = document.getElementById('jwt-btn-' + slug);
-  const box = document.getElementById('jwt-box-' + slug);
-  const ta  = document.getElementById('jwt-ta-' + slug);
+  const btn  = document.getElementById('jwt-btn-' + slug);
+  const box  = document.getElementById('jwt-box-' + slug);
+  const ta   = document.getElementById('jwt-ta-' + slug);
   const meta = document.getElementById('jwt-meta-' + slug);
   const copy = document.getElementById('jwt-copy-' + slug);
   if (!btn) return;
@@ -1091,9 +1294,9 @@ async function fetchJwt(slug) {
   btn.innerHTML = '<span style="opacity:.6">⏳ Ophalen…</span>';
   try {
     const r = await fetch('/issue', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ issuer: slug, credentialType:'DiplomaCertificate' })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issuer: slug, credentialType: 'DiplomaCertificate' })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
@@ -1107,7 +1310,7 @@ async function fetchJwt(slug) {
     box.classList.add('visible');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '⚡ Haal JWT op via /issue';
+    btn.innerHTML = '⚡ Haal verse JWT op';
   }
 }
 
@@ -1132,18 +1335,20 @@ function copyText(text, btn) {
 
 // ── Tooltip ──
 function showTip(e, slug) {
-  const el = document.getElementById('node-' + slug);
-  const desc = SCENARIO_DESC[slug];
-  if (!desc) return;
+  const checks = nodeResults[slug + '__checks'];
+  const scenResult = nodeScenario[slug];
+  let text = '';
+  if (scenResult?.error) text = scenResult.error.substring(0,120);
+  else if (checks?.length) text = checks.find(c => c.type === 'fail')?.text || checks[0]?.text || '';
+  if (!text) return;
   const tip = document.getElementById('tooltip');
-  tip.textContent = desc;
+  tip.textContent = text;
   tip.classList.add('visible');
   moveTip(e);
 }
 function hideTip() { document.getElementById('tooltip').classList.remove('visible'); }
-document.addEventListener('mousemove', (e) => {
-  const tip = document.getElementById('tooltip');
-  if (tip.classList.contains('visible')) moveTip(e);
+document.addEventListener('mousemove', e => {
+  if (document.getElementById('tooltip').classList.contains('visible')) moveTip(e);
 });
 function moveTip(e) {
   const tip = document.getElementById('tooltip');
@@ -1151,27 +1356,23 @@ function moveTip(e) {
   tip.style.top  = (e.clientY + 14) + 'px';
 }
 
-// ── SVG connector lines ──
+// ── SVG connectors ──
 function drawConnectors() {
-  const svg = document.getElementById('connSvg');
+  const svg    = document.getElementById('connSvg');
   const canvas = document.getElementById('diagramCanvas');
   svg.innerHTML = '';
   const cr = canvas.getBoundingClientRect();
-
   for (const [parentSlug, childSlug] of EDGES) {
     const pEl = document.getElementById('node-' + parentSlug);
     const cEl = document.getElementById('node-' + childSlug);
     if (!pEl || !cEl) continue;
-    const pr = pEl.getBoundingClientRect();
+    const pr  = pEl.getBoundingClientRect();
     const cr2 = cEl.getBoundingClientRect();
-
-    const x1 = pr.left + pr.width/2  - cr.left;
-    const y1 = pr.bottom             - cr.top;
+    const x1 = pr.left  + pr.width/2  - cr.left;
+    const y1 = pr.bottom              - cr.top;
     const x2 = cr2.left + cr2.width/2 - cr.left;
-    const y2 = cr2.top               - cr.top;
-
+    const y2 = cr2.top                - cr.top;
     const midY = (y1 + y2) / 2;
-
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`);
     path.dataset.edge = parentSlug + '→' + childSlug;
@@ -1180,12 +1381,14 @@ function drawConnectors() {
   updateEdgeColors();
 }
 
-// ── Endpoint URL updates ──
+// ── Endpoint labels ──
 function updateEndpoints() {
   document.querySelectorAll('.node[data-slug]').forEach(el => {
     const slug = el.dataset.slug;
-    const ep = el.querySelector('.node-ep');
-    if (ep) ep.textContent = `${baseUrl}/${slug}/.well-known/openid-federation`;
+    el.querySelectorAll('.node-ep').forEach((ep, i) => {
+      if (i === 0) ep.textContent = `${baseUrl}/${slug}/.well-known/openid-federation`;
+      if (i === 1) ep.textContent = `${baseUrl}/${slug}/fetch?sub=…`;
+    });
   });
 }
 
@@ -1204,7 +1407,7 @@ window.addEventListener('load', () => {
   });
 });
 
-window.addEventListener('resize', () => { drawConnectors(); });
+window.addEventListener('resize', drawConnectors);
 </script>
 </body>
 </html>
