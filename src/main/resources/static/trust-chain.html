@@ -3,887 +3,631 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trust Chain Topology — Live Status</title>
+<title>Trust Chain Topology</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        #060c18;
-  --surface:   #0c1525;
-  --surface2:  #111d32;
-  --border:    #1b2b45;
-  --border2:   #243652;
-  --text:      #d8e4f5;
-  --text-dim:  #4a6480;
-  --text-mid:  #7a9bbf;
-  --blue:      #3b82f6;
-  --cyan:      #22d3ee;
-  --amber:     #f59e0b;
-  --green:     #10b981;
-  --red:       #ef4444;
-  --purple:    #a855f7;
-  --pass-bg:   #052012;
-  --pass-brd:  #10b981;
-  --fail-bg:   #1a0808;
-  --fail-brd:  #ef4444;
-  --pend-brd:  #1b2b45;
-  --node-w:    168px;
-  --node-h:    88px;
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --surface2: #1c2333;
+  --border:   #30363d;
+  --border2:  #3d4f6e;
+  --text:     #e6edf3;
+  --text-dim: #8b949e;
+  --text-mid: #b1bac4;
+  --blue:     #388bfd;
+  --cyan:     #39d0f0;
+  --amber:    #d29922;
+  --green:    #3fb950;
+  --red:      #f85149;
+  --purple:   #bc8cff;
+  --node-w:   210px;
+  --col-gap:  80px;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
-
-body {
-  font-family: 'Barlow Condensed', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
 
 /* ── Header ── */
 .hdr {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  flex-shrink: 0;
-  z-index: 100;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 18px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; z-index: 100;
 }
-.hdr-logo {
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--cyan);
-  white-space: nowrap;
+.hdr-logo { font-size: 1rem; font-weight: 700; color: var(--cyan); white-space: nowrap; }
+.hdr-sub  { font-size: .72rem; color: var(--text-dim); }
+.hdr-tag  {
+  font-family: 'Fira Code', monospace; font-size: .68rem;
+  color: var(--cyan); background: var(--bg);
+  border: 1px solid var(--border2); border-radius: 4px; padding: 2px 8px;
 }
-.hdr-sub {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  font-family: 'Fira Code', monospace;
-}
-.hdr-base {
-  font-family: 'Fira Code', monospace;
-  font-size: 0.72rem;
-  color: var(--cyan);
-  background: var(--bg);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  padding: 3px 10px;
-  margin-left: 4px;
-}
-.hdr-wallet {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 360px;
-}
-.hdr-wallet label {
-  font-size: .62rem;
-  color: var(--text-dim);
-  font-family: 'Fira Code', monospace;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
+.hdr-wallet { display: flex; align-items: center; gap: 6px; }
+.hdr-wallet label { font-size: .65rem; color: var(--text-dim); white-space: nowrap; }
 .hdr-wallet input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  color: var(--cyan);
-  font-family: 'Fira Code', monospace;
-  font-size: .65rem;
-  padding: 4px 8px;
-  outline: none;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--cyan); font-family: 'Fira Code', monospace; font-size: .65rem;
+  padding: 3px 8px; outline: none; width: 320px;
 }
+.hdr-wallet input[type="password"] { width: 130px; }
 .hdr-spacer { flex: 1; }
-.hdr-legend {
-  display: flex;
-  gap: 14px;
-  font-size: 0.75rem;
-  color: var(--text-mid);
-}
-.leg-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 4px;
-  vertical-align: middle;
-}
+.hdr-legend { display: flex; gap: 12px; font-size: .72rem; color: var(--text-dim); }
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; vertical-align: middle; }
+.run-summary { font-size: .72rem; font-family: 'Fira Code', monospace; color: var(--text-dim); display: none; gap: 6px; align-items: center; }
 .btn-run {
-  padding: 7px 18px;
-  background: var(--blue);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background .15s, transform .1s;
-  white-space: nowrap;
+  padding: 6px 16px; background: var(--blue); color: #fff;
+  border: none; border-radius: 6px; font-family: 'Inter', sans-serif;
+  font-size: .82rem; font-weight: 600; cursor: pointer;
+  transition: background .15s; white-space: nowrap;
 }
-.btn-run:hover { background: #2563eb; }
-.btn-run:active { transform: scale(.97); }
+.btn-run:hover { background: #1f6feb; }
 .btn-run.running { background: var(--amber); color: #000; }
 
-/* ── Layout ── */
-.main {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
+/* ── Main layout ── */
+.main { flex: 1; display: flex; overflow: hidden; }
 
 /* ── Diagram ── */
-.diagram-wrap {
-  flex: 1;
-  overflow: auto;
-  position: relative;
-  padding: 40px 40px 60px;
-}
-.diagram-canvas {
-  position: relative;
-  min-width: 900px;
-}
+.diagram-wrap { flex: 1; overflow: auto; position: relative; }
+.diagram-canvas { position: relative; padding: 32px 40px 48px; min-width: 900px; }
 
-/* SVG connector overlay */
 #connSvg {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  overflow: visible;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; overflow: visible;
 }
-#connSvg line, #connSvg path {
-  stroke: var(--border2);
-  stroke-width: 1.5;
-  fill: none;
-  transition: stroke .4s;
-}
-#connSvg line.pass, #connSvg path.pass { stroke: #10b98166; }
-#connSvg line.fail, #connSvg path.fail { stroke: #ef444455; }
+#connSvg path { stroke: var(--border2); stroke-width: 1.5; fill: none; transition: stroke .4s; }
+#connSvg path.pass { stroke: #3fb95066; }
+#connSvg path.fail { stroke: #f8514955; }
 
-/* ── Rows ── */
-.row {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  position: relative;
-  z-index: 2;
-}
-.row + .row { margin-top: 56px; }
+/* ── Pipeline ── */
+.pipeline { display: flex; align-items: flex-start; gap: 0; position: relative; z-index: 2; }
+.pipe-col { display: flex; flex-direction: column; gap: 14px; width: var(--node-w); flex-shrink: 0; }
+.pipe-col-spacer { width: var(--col-gap); flex-shrink: 0; }
+.pipe-col-anchor  { justify-content: center; align-self: stretch; padding-top: 80px; }
+.pipe-col-inter   { justify-content: center; gap: 24px; padding-top: 20px; }
 
-/* ── Node card ── */
+.leaf-group { display: flex; flex-direction: column; gap: 10px; }
+.leaf-group + .leaf-group { margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border); }
+.leaf-group-label {
+  font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-dim); padding: 0 2px; margin-bottom: 2px;
+}
+
+/* ── Node cards ── */
 .node {
-  width: var(--node-w);
-  min-height: var(--node-h);
-  background: var(--surface);
-  border: 1.5px solid var(--pend-brd);
-  border-radius: 8px;
-  padding: 10px 12px;
-  cursor: pointer;
-  position: relative;
-  transition: border-color .35s, box-shadow .35s, background .35s;
-  user-select: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  width: var(--node-w); background: var(--surface);
+  border: 1px solid var(--border); border-left: 4px solid var(--border2);
+  border-radius: 8px; padding: 10px 12px 10px 14px;
+  cursor: pointer; position: relative; user-select: none;
+  transition: border-color .25s, box-shadow .25s, background .25s;
 }
-.node:hover {
-  border-color: var(--border2);
-  box-shadow: 0 0 0 1px var(--border2);
-}
-.node.selected {
-  box-shadow: 0 0 0 2px var(--cyan);
-  border-color: var(--cyan);
-}
-.node.pass {
-  background: var(--pass-bg);
-  border-color: var(--pass-brd);
-  box-shadow: 0 0 12px #10b98122;
-}
-.node.fail {
-  background: var(--fail-bg);
-  border-color: var(--fail-brd);
-  box-shadow: 0 0 12px #ef444422;
-}
-.node.checking {
-  border-color: var(--amber);
-  animation: pulse-border 1s ease-in-out infinite;
-}
-@keyframes pulse-border {
-  0%, 100% { box-shadow: 0 0 0 0 #f59e0b33; }
-  50%       { box-shadow: 0 0 0 4px #f59e0b11; }
-}
+.node:hover { background: var(--surface2); border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.node.selected { box-shadow: 0 0 0 2px var(--cyan); border-color: var(--cyan); border-left-color: var(--cyan); }
 
-/* Role accent bar — dim by default, only role-anchor/bad keep full color */
-.node::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 3px;
-  height: 100%;
-  border-radius: 8px 0 0 8px;
-  background: var(--border2);
-  transition: background .35s;
-}
-/* Anchor and known-bad always show their role color */
-.node.role-anchor::before  { background: var(--amber); }
-.node.role-bad::before     { background: #5a1a1a; }
-/* Intermediates and leaves: dim until validated */
-.node.role-inter::before   { background: #1a2d4a; }
-.node.role-leaf::before    { background: #1a2d3a; }
-/* After validation: override with result color */
-.node.pass::before         { background: var(--green) !important; }
-.node.fail::before         { background: var(--red)   !important; }
+/* Role left-border colors */
+.node.role-anchor { border-left-color: var(--amber); }
+.node.role-inter  { border-left-color: var(--blue); }
+.node.role-leaf   { border-left-color: var(--border2); }
+.node.role-bad    { border-left-color: #5a1a1a; }
 
-.node-role {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--text-dim);
-}
-/* Role label colors: dim for leaf/inter until validated */
-.node.role-anchor .node-role { color: var(--amber); }
-.node.role-inter  .node-role { color: #3a5a7a; }
-.node.role-leaf   .node-role { color: #2a4a5a; }
-.node.role-bad    .node-role { color: #6a2a2a; }
-/* After validation: restore readable colors */
-.node.pass .node-role, .node.fail .node-role { color: var(--text-dim); }
+/* Status colors override border-left */
+.node.pass { background: #0d1f0f; border-color: #238636; border-left-color: var(--green); box-shadow: 0 0 0 0 transparent; }
+.node.fail { background: #1a0a0a; border-color: #6e2020; border-left-color: var(--red); }
+.node.checking { border-left-color: var(--amber); animation: pulse-border .9s ease-in-out infinite; }
+@keyframes pulse-border { 0%,100% { box-shadow: 0 0 0 0 #d2992244; } 50% { box-shadow: 0 0 0 3px #d2992211; } }
 
-.node-abbr {
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--text);
-  letter-spacing: -0.02em;
-}
-
-.node-name {
-  font-size: 0.72rem;
-  color: var(--text-mid);
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+.node-name { font-size: .82rem; font-weight: 600; color: var(--text); margin-right: 18px; line-height: 1.3; }
 .node-ep {
-  font-family: 'Fira Code', monospace;
-  font-size: 0.58rem;
-  color: var(--text-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-family: 'Fira Code', monospace; font-size: .58rem; color: var(--text-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px;
+}
+.node-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.node-tag {
+  font-size: .6rem; font-weight: 600; padding: 1px 6px; border-radius: 99px;
+  border: 1px solid var(--border); color: var(--text-dim); background: var(--bg);
   white-space: nowrap;
-  margin-top: 2px;
-  transition: color .3s;
 }
-.node:hover .node-ep, .node.selected .node-ep { color: var(--text-mid); }
+.node-tag.scenario { color: var(--blue); border-color: #388bfd55; }
+.node-tag.valid-true { color: var(--green); border-color: #3fb95055; }
+.node-tag.valid-false { color: var(--red); border-color: #f8514955; }
 
-.node-status-dot {
-  position: absolute;
-  top: 8px; right: 8px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--border2);
-  transition: background .35s, box-shadow .35s;
+/* Status dot top-right */
+.node-dot {
+  position: absolute; top: 10px; right: 10px;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: grid; place-items: center; font-size: .7rem;
+  background: var(--surface2); border: 1px solid var(--border);
+  transition: background .3s, border-color .3s;
 }
-.node.pass .node-status-dot {
-  background: var(--green);
-  box-shadow: 0 0 5px var(--green);
-}
-.node.fail .node-status-dot {
-  background: var(--red);
-  box-shadow: 0 0 5px var(--red);
-}
-.node.checking .node-status-dot {
-  background: var(--amber);
-  animation: spin-dot 1s linear infinite;
-}
-@keyframes spin-dot {
-  from { box-shadow: 0 0 0 0 #f59e0b88; }
-  to   { box-shadow: 0 0 8px 2px #f59e0b00; }
-}
+.node.pass .node-dot { background: #238636; border-color: var(--green); color: #fff; }
+.node.fail .node-dot { background: #6e2020; border-color: var(--red); color: #fff; }
+.node.checking .node-dot { background: var(--amber); border-color: var(--amber); color: #000; animation: spin-dot 1.2s linear infinite; }
+@keyframes spin-dot { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* ── Badge for scenario numbers ── */
-.node-badge {
-  position: absolute;
-  bottom: 6px; right: 6px;
-  font-size: 0.58rem;
-  font-family: 'Fira Code', monospace;
-  color: var(--text-dim);
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 1px 4px;
+/* ── Special cases ── */
+.special-section {
+  margin-top: 32px; position: relative; z-index: 2;
+  border: 1px dashed var(--border); border-radius: 10px; padding: 20px 16px 16px;
 }
+.special-section-label {
+  position: absolute; top: -10px; left: 16px; background: var(--bg);
+  padding: 0 8px; font-size: .65rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim);
+}
+.special-nodes { display: flex; flex-wrap: wrap; gap: 12px; }
 
 /* ── Side panel ── */
 .side-panel {
-  width: 380px;
-  border-left: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
+  width: 420px; border-left: 1px solid var(--border);
+  background: var(--surface); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
 }
-.sp-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-.sp-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-.sp-role {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
-.sp-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.sp-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-}
-.sp-url-box {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 8px 10px;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.68rem;
-  color: var(--cyan);
-  word-break: break-all;
-  line-height: 1.6;
-  position: relative;
-}
-.sp-url-box .url-label {
-  font-size: 0.6rem;
-  color: var(--text-dim);
-  display: block;
-  margin-bottom: 2px;
-  font-family: 'Barlow Condensed', sans-serif;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
-.sp-url-box .copy-btn {
-  position: absolute;
-  top: 6px; right: 6px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-mid);
-  font-size: 0.6rem;
-  font-family: 'Fira Code', monospace;
-  padding: 2px 6px;
-  cursor: pointer;
-  transition: color .15s, background .15s;
-}
-.sp-url-box .copy-btn:hover { color: var(--cyan); background: var(--border); }
-
-.sp-status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-}
-.sp-status-row.pass { background: var(--pass-bg); border-color: var(--pass-brd); color: var(--green); }
-.sp-status-row.fail { background: var(--fail-bg); border-color: var(--fail-brd); color: var(--red); }
-.sp-status-row.pending { color: var(--text-dim); }
-
-.check-result {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 8px 10px;
-  font-size: 0.72rem;
-  color: var(--text-mid);
-  max-height: 120px;
-  overflow-y: auto;
-}
-.check-result .cr-row {
-  display: flex;
-  gap: 6px;
-  padding: 2px 0;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.65rem;
-}
-.cr-ok { color: var(--green); }
-.cr-fail { color: var(--red); }
-.cr-warn { color: var(--amber); }
-.cr-dim  { color: var(--text-dim); }
-
-.sp-divider { border: none; border-top: 1px solid var(--border); }
-
-/* JWT section */
-.btn-get-jwt {
-  width: 100%;
-  padding: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: 5px;
-  color: var(--cyan);
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: background .15s, border-color .15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.btn-get-jwt:hover { background: var(--border); border-color: var(--cyan); }
-.btn-get-jwt:disabled { color: var(--text-dim); cursor: not-allowed; border-color: var(--border); }
-
-.jwt-output {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 8px 10px;
-  display: none;
-}
-.jwt-output.visible { display: block; }
-.jwt-ta {
-  width: 100%;
-  background: transparent;
-  border: none;
-  color: var(--cyan);
-  font-family: 'Fira Code', monospace;
-  font-size: 0.62rem;
-  resize: vertical;
-  min-height: 64px;
-  outline: none;
-  line-break: anywhere;
-}
-.jwt-meta {
-  margin-top: 6px;
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-family: 'Fira Code', monospace;
-}
-.btn-copy-jwt {
-  margin-top: 6px;
-  padding: 4px 10px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-mid);
-  font-size: 0.72rem;
-  cursor: pointer;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 600;
-  transition: color .15s;
-}
-.btn-copy-jwt:hover { color: var(--cyan); }
-.btn-copy-jwt:disabled { opacity: .4; cursor: not-allowed; }
-
-.wallet-result {
-  display: none;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 8px 10px;
-}
-.wallet-result.visible { display: block; }
-.wallet-result.valid { border-color: var(--green); background: var(--pass-bg); }
-.wallet-result.invalid { border-color: var(--red); background: var(--fail-bg); }
-.wallet-title {
-  font-size: .78rem;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-.wallet-result.valid .wallet-title { color: var(--green); }
-.wallet-result.invalid .wallet-title { color: var(--red); }
-.policy-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-}
-.policy-card {
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 7px 8px;
-  background: var(--surface);
-}
-.policy-card.ok { border-color: #10b98155; }
-.policy-card.fail { border-color: #ef444455; }
-.policy-name {
-  font-family: 'Fira Code', monospace;
-  font-size: .64rem;
-  font-weight: 700;
-}
-.policy-card.ok .policy-name { color: var(--green); }
-.policy-card.fail .policy-name { color: var(--red); }
-.policy-desc {
-  color: var(--text-mid);
-  font-size: .68rem;
-  line-height: 1.35;
-  margin-top: 4px;
-}
-.wallet-raw {
-  margin-top: 8px;
-  color: var(--text-mid);
-  font-family: 'Fira Code', monospace;
-  font-size: .6rem;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 120px;
-  overflow: auto;
-}
-
 .sp-empty {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 8px;
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  padding: 40px;
-  text-align: center;
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 8px; color: var(--text-dim); font-size: .85rem; text-align: center; padding: 40px;
 }
 .sp-empty-icon { font-size: 2rem; opacity: .3; }
+.sp-header { padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface2); flex-shrink: 0; }
+.sp-title { font-size: 1rem; font-weight: 700; }
+.sp-role { font-size: .72rem; color: var(--text-dim); margin-top: 2px; }
 
-/* ── Rogue / standalone node group ── */
-.rogue-group {
-  position: relative;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 12px 12px 8px;
-  margin-top: 20px;
+.sp-tabs {
+  display: flex; gap: 4px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0;
 }
-.rogue-group-label {
-  position: absolute;
-  top: -9px; left: 12px;
-  background: var(--bg);
-  padding: 0 6px;
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--text-dim);
+.sp-tab {
+  border: 1px solid var(--border); background: transparent; color: var(--text-dim);
+  border-radius: 5px; padding: 5px 10px; font-family: 'Inter', sans-serif;
+  font-size: .72rem; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s;
+}
+.sp-tab:hover { color: var(--text); border-color: var(--border2); }
+.sp-tab.active { color: var(--cyan); border-color: var(--cyan); background: #071b2a; }
+
+.sp-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.tab-pane { display: none; flex-direction: column; gap: 12px; }
+.tab-pane.active { display: flex; }
+
+/* ── Status row ── */
+.status-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: 6px; font-size: .8rem; font-weight: 600; border: 1px solid var(--border);
+}
+.status-row.pass { background: #0d1f0f; border-color: #238636; color: var(--green); }
+.status-row.fail { background: #1a0a0a; border-color: #6e2020; color: var(--red); }
+.status-row.pending { color: var(--text-dim); background: var(--bg); }
+.status-row.warn { background: #1a1208; border-color: #5a3a0a; color: var(--amber); }
+
+/* ── Section label ── */
+.sec-label {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-dim); margin-bottom: 4px;
 }
 
-/* Scroll bar */
+/* ── URL box ── */
+.url-box {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-family: 'Fira Code', monospace; font-size: .65rem;
+  color: var(--cyan); word-break: break-all; line-height: 1.6; position: relative;
+}
+.url-box .url-label { font-size: .6rem; color: var(--text-dim); display: block; margin-bottom: 2px; font-family: 'Inter', sans-serif; text-transform: uppercase; }
+.url-box .copy-btn {
+  position: absolute; top: 6px; right: 6px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--text-dim); font-size: .6rem; padding: 2px 6px; cursor: pointer; transition: color .15s;
+}
+.url-box .copy-btn:hover { color: var(--cyan); }
+
+/* ── Flow steps ── */
+.flow-steps { display: flex; flex-direction: column; gap: 6px; }
+.flow-step {
+  display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: flex-start;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg);
+}
+.flow-step.pass { border-color: #23863655; background: #0d1f0f; }
+.flow-step.fail { border-color: #6e202055; background: #1a0a0a; }
+.flow-step.warn { border-color: #5a3a0a55; background: #1a1208; }
+.flow-num {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-family: 'Fira Code', monospace; font-size: .62rem;
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text-mid); flex-shrink: 0;
+}
+.flow-step.pass .flow-num { color: var(--green); border-color: var(--green); }
+.flow-step.fail .flow-num { color: var(--red); border-color: var(--red); }
+.flow-step.warn .flow-num { color: var(--amber); border-color: var(--amber); }
+.flow-name { font-size: .78rem; font-weight: 600; }
+.flow-detail { color: var(--text-mid); font-family: 'Fira Code', monospace; font-size: .6rem; margin-top: 2px; word-break: break-word; }
+.flow-badge { font-family: 'Fira Code', monospace; font-size: .58rem; color: var(--text-dim); white-space: nowrap; padding-top: 2px; }
+.flow-step.pass .flow-badge { color: var(--green); }
+.flow-step.fail .flow-badge { color: var(--red); }
+
+/* ── Chain tree ── */
+.chain-tree { display: flex; flex-direction: column; gap: 0; }
+.chain-item {
+  position: relative; border: 1px solid var(--border); background: var(--bg);
+  border-radius: 7px; padding: 9px 10px 9px 32px; margin-top: 8px;
+}
+.chain-item:first-child { margin-top: 0; }
+.chain-item::before { content: ''; position: absolute; left: 12px; top: -9px; bottom: 50%; width: 1px; background: var(--border2); }
+.chain-item:first-child::before { display: none; }
+.chain-item::after { content: ''; position: absolute; left: 7px; top: 13px; width: 11px; height: 11px; border-radius: 50%; background: var(--surface2); border: 1.5px solid var(--cyan); }
+.chain-item.fail::after { border-color: var(--red); }
+.chain-item.pass::after { border-color: var(--green); background: #0d1f0f; }
+.chain-label { font-size: .78rem; font-weight: 600; }
+.chain-meta { color: var(--text-dim); font-family: 'Fira Code', monospace; font-size: .6rem; margin-top: 3px; word-break: break-all; }
+
+/* ── JWT / Swagger section ── */
+.btn-action {
+  width: 100%; padding: 9px; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 6px; color: var(--cyan); font-family: 'Inter', sans-serif;
+  font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-action:hover { background: var(--border); border-color: var(--cyan); }
+.btn-action:disabled { color: var(--text-dim); cursor: not-allowed; border-color: var(--border); }
+.btn-action.primary { background: #1f6feb33; border-color: var(--blue); color: #58a6ff; }
+.btn-action.primary:hover { background: #1f6feb55; }
+
+/* Swagger payload block */
+.swagger-ready {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+  display: none;
+}
+.swagger-ready.visible { display: block; }
+.swagger-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.swagger-head-label { font-size: .72rem; font-weight: 600; color: var(--text-mid); }
+.swagger-method { font-family: 'Fira Code', monospace; font-size: .62rem; font-weight: 700; background: #1f6feb; color: #fff; padding: 2px 6px; border-radius: 3px; }
+.swagger-endpoint { font-family: 'Fira Code', monospace; font-size: .62rem; color: var(--text-dim); flex: 1; margin-left: 6px; }
+.swagger-pre {
+  padding: 10px 12px; font-family: 'Fira Code', monospace; font-size: .65rem;
+  color: var(--cyan); white-space: pre-wrap; word-break: break-word; line-height: 1.6;
+  max-height: 200px; overflow-y: auto;
+}
+.swagger-actions { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.swagger-btn {
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface2); color: var(--text-mid); font-size: .72rem; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: color .15s;
+}
+.swagger-btn:hover { color: var(--cyan); border-color: var(--cyan); }
+
+/* Expected outcome badge */
+.outcome-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 99px; font-size: .72rem; font-weight: 600;
+  border: 1px solid transparent;
+}
+.outcome-badge.pass { background: #0d1f0f; border-color: #23863655; color: var(--green); }
+.outcome-badge.fail { background: #1a0a0a; border-color: #6e202055; color: var(--red); }
+.outcome-badge.warn { background: #1a1208; border-color: #5a3a0a55; color: var(--amber); }
+
+/* Check rows */
+.check-list { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; max-height: 120px; overflow-y: auto; }
+.check-row { display: flex; gap: 6px; padding: 2px 0; font-family: 'Fira Code', monospace; font-size: .65rem; }
+.cr-ok { color: var(--green); } .cr-fail { color: var(--red); } .cr-warn { color: var(--amber); } .cr-dim { color: var(--text-dim); }
+
+/* Policy cards */
+.policy-grid { display: flex; flex-direction: column; gap: 8px; }
+.policy-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--bg); }
+.policy-card.ok { border-color: #23863655; }
+.policy-card.fail { border-color: #6e202055; }
+.policy-card.warn { border-color: #5a3a0a55; }
+.policy-name { font-family: 'Fira Code', monospace; font-size: .68rem; font-weight: 700; }
+.policy-card.ok .policy-name { color: var(--green); }
+.policy-card.fail .policy-name { color: var(--red); }
+.policy-card.warn .policy-name { color: var(--amber); }
+.policy-desc { color: var(--text-mid); font-size: .7rem; line-height: 1.4; margin-top: 4px; }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.info-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--bg); }
+.info-card-title { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); }
+.info-card-value { font-family: 'Fira Code', monospace; font-size: .64rem; color: var(--text); margin-top: 4px; word-break: break-word; }
+
+/* Wallet result */
+.wallet-result { border: 1px solid var(--border); border-radius: 6px; padding: 10px; background: var(--bg); display: none; }
+.wallet-result.visible { display: block; }
+.wallet-result.valid { border-color: #23863655; background: #0d1f0f; }
+.wallet-result.invalid { border-color: #6e202055; background: #1a0a0a; }
+.wallet-title { font-size: .82rem; font-weight: 700; margin-bottom: 8px; }
+.wallet-result.valid .wallet-title { color: var(--green); }
+.wallet-result.invalid .wallet-title { color: var(--red); }
+.wallet-raw { color: var(--text-mid); font-family: 'Fira Code', monospace; font-size: .6rem; white-space: pre-wrap; word-break: break-word; max-height: 120px; overflow: auto; margin-top: 6px; }
+
+/* Divider */
+.sp-hr { border: none; border-top: 1px solid var(--border); }
+
+/* Tooltip */
+.tooltip { position: fixed; background: var(--surface2); border: 1px solid var(--border2); border-radius: 5px; padding: 6px 10px; font-size: .72rem; color: var(--text); pointer-events: none; z-index: 9999; opacity: 0; transition: opacity .15s; max-width: 260px; font-family: 'Fira Code', monospace; line-height: 1.5; }
+.tooltip.visible { opacity: 1; }
+
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2e4268; }
-
-/* ── Tooltip ── */
-.tooltip {
-  position: fixed;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: 5px;
-  padding: 6px 10px;
-  font-size: 0.72rem;
-  color: var(--text);
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0;
-  transition: opacity .15s;
-  max-width: 260px;
-  font-family: 'Fira Code', monospace;
-  line-height: 1.5;
-}
-.tooltip.visible { opacity: 1; }
+::-webkit-scrollbar-thumb:hover { background: #4a6486; }
 </style>
 </head>
 <body>
 
-<!-- ── Header ── -->
 <header class="hdr">
   <div>
     <div class="hdr-logo">⛓ Trust Chain Topology</div>
-    <div class="hdr-sub">Live OpenID Federation endpoint verificatie</div>
+    <div class="hdr-sub">OpenID Federation verificatie</div>
   </div>
-  <div class="hdr-base" id="baseUrlDisplay">laden…</div>
+  <div class="hdr-tag" id="baseUrlDisplay">laden…</div>
   <div class="hdr-wallet">
-    <label for="walletBackendUrl">Wallet verify</label>
+    <label>Wallet</label>
     <input id="walletBackendUrl" value="http://localhost:8088/api/v2/credential/raw/verify">
+    <label>API key</label>
+    <input id="walletApiKey" type="password" placeholder="optioneel">
   </div>
   <div class="hdr-spacer"></div>
   <div class="hdr-legend">
     <span><span class="leg-dot" style="background:var(--amber)"></span>Trust Anchor</span>
-    <span><span class="leg-dot" style="background:#1a2d4a;border:1px solid #243652"></span>Intermediate</span>
-    <span><span class="leg-dot" style="background:#1a2d3a;border:1px solid #243652"></span>Leaf</span>
-    <span><span class="leg-dot" style="background:var(--border2)"></span>Niet gevalideerd</span>
+    <span><span class="leg-dot" style="background:var(--blue)"></span>Intermediate</span>
+    <span><span class="leg-dot" style="background:var(--border2)"></span>Leaf</span>
     <span><span class="leg-dot" style="background:var(--green)"></span>Geslaagd</span>
     <span><span class="leg-dot" style="background:var(--red)"></span>Mislukt</span>
   </div>
-  <div id="runSummary" style="font-size:.72rem;font-family:'Fira Code',monospace;color:var(--text-dim);display:none;">
+  <div class="run-summary" id="runSummary">
     <span id="sumPassed" style="color:var(--green)">0 ✓</span>
-    <span style="color:var(--border2)"> / </span>
+    <span style="color:var(--border2)">/</span>
     <span id="sumFailed" style="color:var(--red)">0 ✗</span>
-    <span style="color:var(--border2)"> / </span>
+    <span style="color:var(--border2)">/</span>
     <span id="sumTotal" style="color:var(--text-dim)">0 totaal</span>
   </div>
   <button class="btn-run" id="btnRun" onclick="runAll()">▶ Valideer trust chains</button>
 </header>
 
-<!-- ── Main ── -->
 <div class="main">
 
-  <!-- Diagram -->
   <div class="diagram-wrap" id="diagramWrap">
     <div class="diagram-canvas" id="diagramCanvas">
       <svg id="connSvg"></svg>
 
-      <!-- Row 0: Trust Anchor -->
-      <div class="row" id="row0">
-        <div class="node role-anchor" id="node-anchor"
-             data-slug="anchor" data-name="Nederlandse Overheid" data-role="Trust Anchor" data-abbr="TA"
-             onclick="selectNode('anchor')" onmouseenter="showTip(event,'anchor')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Trust Anchor</div>
-          <div class="node-abbr">TA</div>
-          <div class="node-name">Nederlandse Overheid</div>
-          <div style="margin-top:4px;display:flex;flex-direction:column;gap:2px;">
-            <div style="font-size:.58rem;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Fira Code',monospace;">Entity config</div>
+      <!-- ── Horizontal pipeline ── -->
+      <div class="pipeline" id="pipeline">
+
+        <!-- Col 1: Trust Anchor -->
+        <div class="pipe-col pipe-col-anchor" id="pcol-anchor">
+          <div class="node role-anchor" id="node-anchor"
+               data-slug="anchor" data-name="Nederlandse Overheid" data-role="Trust Anchor" data-abbr="TA"
+               onclick="selectNode('anchor')" onmouseenter="showTip(event,'anchor')" onmouseleave="hideTip()">
+            <div class="node-dot">—</div>
+            <div class="node-name">Nederlandse Overheid</div>
             <div class="node-ep" id="ep-anchor">/anchor/.well-known/openid-federation</div>
-            <div style="font-size:.58rem;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Fira Code',monospace;margin-top:3px;">Fetch endpoint</div>
-            <div class="node-ep" id="ep-anchor-fetch">/anchor/fetch?sub=…</div>
+            <div class="node-tags">
+              <span class="node-tag">Trust Anchor</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Row 1: Intermediates -->
-      <div class="row" id="row1">
-        <div class="node role-inter" id="node-intermediate"
-             data-slug="intermediate" data-name="Surf" data-role="Intermediate" data-abbr="INT"
-             onclick="selectNode('intermediate')" onmouseenter="showTip(event,'intermediate')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Intermediate</div>
-          <div class="node-abbr">INT</div>
-          <div class="node-name">Surf</div>
-          <div class="node-ep" id="ep-intermediate">/intermediate/.well-known/openid-federation</div>
-        </div>
-        <div class="node role-inter" id="node-intermediate2"
-             data-slug="intermediate2" data-name="HBO-raad" data-role="Intermediate" data-abbr="INT"
-             onclick="selectNode('intermediate2')" onmouseenter="showTip(event,'intermediate2')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Intermediate</div>
-          <div class="node-abbr">INT</div>
-          <div class="node-name">HBO-raad</div>
-          <div class="node-ep" id="ep-intermediate2">/intermediate2/.well-known/openid-federation</div>
-        </div>
-      </div>
+        <div class="pipe-col-spacer"></div>
 
-      <!-- Row 2: Main leaves -->
-      <div class="row" id="row2">
-        <div class="node role-leaf" id="node-leaf"
-             data-slug="leaf" data-name="Hogeschool Utrecht" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="true" data-scenario="1"
-             onclick="selectNode('leaf')" onmouseenter="showTip(event,'leaf')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Hogeschool Utrecht</div>
-          <div class="node-ep" id="ep-leaf">/leaf/.well-known/openid-federation</div>
-          <div class="node-badge">S1</div>
+        <!-- Col 2: Intermediates -->
+        <div class="pipe-col pipe-col-inter" id="pcol-inter">
+          <div class="node role-inter" id="node-intermediate"
+               data-slug="intermediate" data-name="Surf" data-role="Intermediate"
+               onclick="selectNode('intermediate')" onmouseenter="showTip(event,'intermediate')" onmouseleave="hideTip()">
+            <div class="node-dot">—</div>
+            <div class="node-name">Surf</div>
+            <div class="node-ep" id="ep-intermediate">/intermediate/.well-known/openid-federation</div>
+            <div class="node-tags"><span class="node-tag">Intermediate</span></div>
+          </div>
+          <div class="node role-inter" id="node-intermediate2"
+               data-slug="intermediate2" data-name="HBO-raad" data-role="Intermediate"
+               onclick="selectNode('intermediate2')" onmouseenter="showTip(event,'intermediate2')" onmouseleave="hideTip()">
+            <div class="node-dot">—</div>
+            <div class="node-name">HBO-raad</div>
+            <div class="node-ep" id="ep-intermediate2">/intermediate2/.well-known/openid-federation</div>
+            <div class="node-tags"><span class="node-tag">Intermediate</span></div>
+          </div>
         </div>
-        <div class="node role-leaf" id="node-leaf-expired"
-             data-slug="leaf-expired" data-name="Verlopen Instelling" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="false" data-scenario="4"
-             onclick="selectNode('leaf-expired')" onmouseenter="showTip(event,'leaf-expired')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Verlopen Instelling</div>
-          <div class="node-ep" id="ep-leaf-expired">/leaf-expired/.well-known/openid-federation</div>
-          <div class="node-badge">S4</div>
-        </div>
-        <div class="node role-leaf" id="node-leaf-wrongkey"
-             data-slug="leaf-wrongkey" data-name="Verkeerde Sleutel" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="false" data-scenario="5"
-             onclick="selectNode('leaf-wrongkey')" onmouseenter="showTip(event,'leaf-wrongkey')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Verkeerde Sleutel</div>
-          <div class="node-ep" id="ep-leaf-wrongkey">/leaf-wrongkey/.well-known/openid-federation</div>
-          <div class="node-badge">S5</div>
-        </div>
-        <div class="node role-leaf" id="node-leaf-subwrong"
-             data-slug="leaf-subwrong" data-name="Verkeerde Sub" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="false" data-scenario="12"
-             onclick="selectNode('leaf-subwrong')" onmouseenter="showTip(event,'leaf-subwrong')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Verkeerde Sub</div>
-          <div class="node-ep" id="ep-leaf-subwrong">/leaf-subwrong/.well-known/openid-federation</div>
-          <div class="node-badge">S12</div>
-        </div>
-        <div class="node role-leaf" id="node-leaf-multihint"
-             data-slug="leaf-multihint" data-name="Meervoudige Hint" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="true" data-scenario="9"
-             onclick="selectNode('leaf-multihint')" onmouseenter="showTip(event,'leaf-multihint')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Meervoudige Hint</div>
-          <div class="node-ep" id="ep-leaf-multihint">/leaf-multihint/.well-known/openid-federation</div>
-          <div class="node-badge">S9</div>
-        </div>
-        <div class="node role-bad" id="node-leaf-nohint"
-             data-slug="leaf-nohint" data-name="Geen Geldige Hint" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="false" data-scenario="10"
-             onclick="selectNode('leaf-nohint')" onmouseenter="showTip(event,'leaf-nohint')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Geen Geldige Hint</div>
-          <div class="node-ep" id="ep-leaf-nohint">/leaf-nohint/.well-known/openid-federation</div>
-          <div class="node-badge">S10</div>
-        </div>
-        <div class="node role-leaf" id="node-leaf2"
-             data-slug="leaf2" data-name="Hogeschool Amsterdam" data-role="OP / Leaf" data-abbr="OP"
-             data-valid="true" data-scenario="2"
-             onclick="selectNode('leaf2')" onmouseenter="showTip(event,'leaf2')" onmouseleave="hideTip()">
-          <div class="node-status-dot"></div>
-          <div class="node-role">Leaf · OP</div>
-          <div class="node-abbr">OP</div>
-          <div class="node-name">Hogeschool Amsterdam</div>
-          <div class="node-ep" id="ep-leaf2">/leaf2/.well-known/openid-federation</div>
-          <div class="node-badge">S2</div>
-        </div>
-      </div>
 
-      <!-- Standalone / problem nodes -->
-      <div class="rogue-group" id="rogueGroup" style="margin-top:40px;">
-        <span class="rogue-group-label">Buiten federatie / speciale gevallen</span>
-        <div class="row" style="margin-top:0;justify-content:flex-start;flex-wrap:wrap;gap:14px;">
+        <div class="pipe-col-spacer"></div>
+
+        <!-- Col 3: Leaves -->
+        <div class="pipe-col" id="pcol-leaves">
+
+          <!-- Surf's leaves -->
+          <div class="leaf-group" id="lg-surf">
+            <div class="leaf-group-label">via Surf</div>
+
+            <div class="node role-leaf" id="node-leaf"
+                 data-slug="leaf" data-name="Hogeschool Utrecht" data-role="OP / Leaf" data-valid="true" data-scenario="1"
+                 onclick="selectNode('leaf')" onmouseenter="showTip(event,'leaf')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Hogeschool Utrecht</div>
+              <div class="node-ep" id="ep-leaf">/leaf/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S1</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-expired"
+                 data-slug="leaf-expired" data-name="Verlopen Instelling" data-role="OP / Leaf" data-valid="false" data-scenario="4"
+                 onclick="selectNode('leaf-expired')" onmouseenter="showTip(event,'leaf-expired')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Verlopen Instelling</div>
+              <div class="node-ep" id="ep-leaf-expired">/leaf-expired/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S4</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-wrongkey"
+                 data-slug="leaf-wrongkey" data-name="Verkeerde Sleutel" data-role="OP / Leaf" data-valid="false" data-scenario="5"
+                 onclick="selectNode('leaf-wrongkey')" onmouseenter="showTip(event,'leaf-wrongkey')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Verkeerde Sleutel</div>
+              <div class="node-ep" id="ep-leaf-wrongkey">/leaf-wrongkey/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S5</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-subwrong"
+                 data-slug="leaf-subwrong" data-name="Verkeerde Sub" data-role="OP / Leaf" data-valid="false" data-scenario="12"
+                 onclick="selectNode('leaf-subwrong')" onmouseenter="showTip(event,'leaf-subwrong')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Verkeerde Sub</div>
+              <div class="node-ep" id="ep-leaf-subwrong">/leaf-subwrong/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S12</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-multihint"
+                 data-slug="leaf-multihint" data-name="Meervoudige Hint" data-role="OP / Leaf" data-valid="true" data-scenario="9"
+                 onclick="selectNode('leaf-multihint')" onmouseenter="showTip(event,'leaf-multihint')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Meervoudige Hint</div>
+              <div class="node-ep" id="ep-leaf-multihint">/leaf-multihint/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S9</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+
+            <div class="node role-bad" id="node-leaf-nohint"
+                 data-slug="leaf-nohint" data-name="Geen Geldige Hint" data-role="OP / Leaf" data-valid="false" data-scenario="10"
+                 onclick="selectNode('leaf-nohint')" onmouseenter="showTip(event,'leaf-nohint')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Geen Geldige Hint</div>
+              <div class="node-ep" id="ep-leaf-nohint">/leaf-nohint/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S10</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-policy-type"
+                 data-slug="leaf-policy-type" data-name="Policy: Type beperkt" data-role="OP / Leaf" data-valid="false" data-scenario="6"
+                 onclick="selectNode('leaf-policy-type')" onmouseenter="showTip(event,'leaf-policy-type')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Policy: Type beperkt</div>
+              <div class="node-ep" id="ep-leaf-policy-type">/leaf-policy-type/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S6</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-policy-jwks"
+                 data-slug="leaf-policy-jwks" data-name="Policy: JWKS overschreven" data-role="OP / Leaf" data-valid="false" data-scenario="7"
+                 onclick="selectNode('leaf-policy-jwks')" onmouseenter="showTip(event,'leaf-policy-jwks')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Policy: JWKS overschreven</div>
+              <div class="node-ep" id="ep-leaf-policy-jwks">/leaf-policy-jwks/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S7</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-policy-type-ok"
+                 data-slug="leaf-policy-type-ok" data-name="Policy: Type toegestaan" data-role="OP / Leaf" data-valid="true" data-scenario="15"
+                 onclick="selectNode('leaf-policy-type-ok')" onmouseenter="showTip(event,'leaf-policy-type-ok')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Policy: Type toegestaan</div>
+              <div class="node-ep" id="ep-leaf-policy-type-ok">/leaf-policy-type-ok/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S15</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-policy-jwks-ok"
+                 data-slug="leaf-policy-jwks-ok" data-name="Policy: JWKS geldig" data-role="OP / Leaf" data-valid="true" data-scenario="16"
+                 onclick="selectNode('leaf-policy-jwks-ok')" onmouseenter="showTip(event,'leaf-policy-jwks-ok')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Policy: JWKS geldig</div>
+              <div class="node-ep" id="ep-leaf-policy-jwks-ok">/leaf-policy-jwks-ok/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S16</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-policy-crit-ok"
+                 data-slug="leaf-policy-crit-ok" data-name="Policy: Crit operator OK" data-role="OP / Leaf" data-valid="true" data-scenario="17"
+                 onclick="selectNode('leaf-policy-crit-ok')" onmouseenter="showTip(event,'leaf-policy-crit-ok')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Policy: Crit operator OK</div>
+              <div class="node-ep" id="ep-leaf-policy-crit-ok">/leaf-policy-crit-ok/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S17</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+          </div><!-- /lg-surf -->
+
+          <!-- HBO-raad's leaves -->
+          <div class="leaf-group" id="lg-hbo">
+            <div class="leaf-group-label">via HBO-raad</div>
+            <div class="node role-leaf" id="node-leaf2"
+                 data-slug="leaf2" data-name="Hogeschool Amsterdam" data-role="OP / Leaf" data-valid="true" data-scenario="2"
+                 onclick="selectNode('leaf2')" onmouseenter="showTip(event,'leaf2')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Hogeschool Amsterdam</div>
+              <div class="node-ep" id="ep-leaf2">/leaf2/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S2</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /pcol-leaves -->
+
+      </div><!-- /pipeline -->
+
+      <!-- ── Special cases ── -->
+      <div class="special-section" id="rogueGroup">
+        <span class="special-section-label">Buiten federatie / speciale gevallen</span>
+        <div class="special-nodes">
+
           <div class="node role-bad" id="node-rogue"
-               data-slug="rogue" data-name="Onbekende Instelling" data-role="Rogue Leaf" data-abbr="OP"
-               data-valid="false" data-scenario="3"
+               data-slug="rogue" data-name="Onbekende Instelling" data-role="Rogue Leaf" data-valid="false" data-scenario="3"
                onclick="selectNode('rogue')" onmouseenter="showTip(event,'rogue')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Rogue Leaf · OP</div>
-            <div class="node-abbr">OP</div>
+            <div class="node-dot">—</div>
             <div class="node-name">Onbekende Instelling</div>
             <div class="node-ep" id="ep-rogue">/rogue/.well-known/openid-federation</div>
-            <div class="node-badge">S3</div>
+            <div class="node-tags"><span class="node-tag scenario">S3</span><span class="node-tag valid-false">niet in federatie</span></div>
           </div>
-          <div class="node role-leaf" id="node-leaf-policy-type"
-               data-slug="leaf-policy-type" data-name="Policy: Type beperkt" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="false" data-scenario="6"
-               onclick="selectNode('leaf-policy-type')" onmouseenter="showTip(event,'leaf-policy-type')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Policy</div>
-            <div class="node-abbr">OP</div>
-            <div class="node-name">Policy: Type beperkt</div>
-            <div class="node-ep" id="ep-leaf-policy-type">/leaf-policy-type/.well-known/openid-federation</div>
-            <div class="node-badge">S6</div>
+
+          <div class="node role-bad" id="node-leaf-wronganchor"
+               data-slug="leaf" data-name="Verkeerd Trust Anchor" data-role="OP / Leaf" data-valid="false" data-scenario="11"
+               onclick="selectNode('leaf-wronganchor')" onmouseenter="showTip(event,'leaf-wronganchor')" onmouseleave="hideTip()">
+            <div class="node-dot">—</div>
+            <div class="node-name">Verkeerd Trust Anchor</div>
+            <div class="node-ep" id="ep-leaf-wronganchor">/leaf/.well-known/openid-federation</div>
+            <div class="node-tags"><span class="node-tag scenario">S11</span><span class="node-tag valid-false">verkeerd anchor</span></div>
           </div>
-          <div class="node role-leaf" id="node-leaf-policy-jwks"
-               data-slug="leaf-policy-jwks" data-name="Policy: JWKS overschreven" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="false" data-scenario="7"
-               onclick="selectNode('leaf-policy-jwks')" onmouseenter="showTip(event,'leaf-policy-jwks')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Policy</div>
-            <div class="node-abbr">OP</div>
-            <div class="node-name">Policy: JWKS overschreven</div>
-            <div class="node-ep" id="ep-leaf-policy-jwks">/leaf-policy-jwks/.well-known/openid-federation</div>
-            <div class="node-badge">S7</div>
-          </div>
+
           <div class="node role-bad" id="node-leaf-deep"
-               data-slug="leaf-deep" data-name="Te diepe keten" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="false" data-scenario="13"
+               data-slug="leaf-deep" data-name="Te diepe keten" data-role="OP / Leaf" data-valid="false" data-scenario="13"
                onclick="selectNode('leaf-deep')" onmouseenter="showTip(event,'leaf-deep')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Diepte</div>
-            <div class="node-abbr">OP</div>
+            <div class="node-dot">—</div>
             <div class="node-name">Te diepe keten</div>
             <div class="node-ep" id="ep-leaf-deep">/leaf-deep/.well-known/openid-federation</div>
-            <div class="node-badge">S13</div>
+            <div class="node-tags"><span class="node-tag scenario">S13</span><span class="node-tag valid-false">verwacht: ongeldig</span></div>
           </div>
+
           <div class="node role-bad" id="node-leaf-maxpath"
-               data-slug="leaf-maxpath" data-name="Max path overschreden" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="false" data-scenario="14"
+               data-slug="leaf-maxpath" data-name="Max path overschreden" data-role="OP / Leaf" data-valid="false" data-scenario="14"
                onclick="selectNode('leaf-maxpath')" onmouseenter="showTip(event,'leaf-maxpath')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Constraints</div>
-            <div class="node-abbr">OP</div>
+            <div class="node-dot">—</div>
             <div class="node-name">Max path overschreden</div>
             <div class="node-ep" id="ep-leaf-maxpath">/leaf-maxpath/.well-known/openid-federation</div>
-            <div class="node-badge">S14</div>
+            <div class="node-tags"><span class="node-tag scenario">S14</span><span class="node-tag valid-false">verwacht: ongeldig</span></div>
           </div>
-          <div class="node role-bad" id="node-leaf-wronganchor"
-               data-slug="leaf" data-name="Verkeerd trust anchor" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="false" data-scenario="11"
-               onclick="selectNode('leaf-wronganchor')" onmouseenter="showTip(event,'leaf-wronganchor')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Verkeerd anchor</div>
-            <div class="node-abbr">OP</div>
-            <div class="node-name">Verkeerd trust anchor</div>
-            <div class="node-ep" id="ep-leaf-wronganchor">/leaf/.well-known/openid-federation</div>
-            <div class="node-badge">S11</div>
-          </div>
-          <div class="node role-leaf" id="node-leaf-policy-type-ok"
-               data-slug="leaf-policy-type-ok" data-name="Policy: Type toegestaan" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="true" data-scenario="15"
-               onclick="selectNode('leaf-policy-type-ok')" onmouseenter="showTip(event,'leaf-policy-type-ok')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Policy ✓</div>
-            <div class="node-abbr">OP</div>
-            <div class="node-name">Policy: Type toegestaan</div>
-            <div class="node-ep" id="ep-leaf-policy-type-ok">/leaf-policy-type-ok/.well-known/openid-federation</div>
-            <div class="node-badge">S15</div>
-          </div>
-          <div class="node role-leaf" id="node-leaf-policy-jwks-ok"
-               data-slug="leaf-policy-jwks-ok" data-name="Policy: JWKS geldig" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="true" data-scenario="16"
-               onclick="selectNode('leaf-policy-jwks-ok')" onmouseenter="showTip(event,'leaf-policy-jwks-ok')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Policy ✓</div>
-            <div class="node-abbr">OP</div>
-            <div class="node-name">Policy: JWKS geldig</div>
-            <div class="node-ep" id="ep-leaf-policy-jwks-ok">/leaf-policy-jwks-ok/.well-known/openid-federation</div>
-            <div class="node-badge">S16</div>
-          </div>
-          <div class="node role-leaf" id="node-leaf-policy-crit-ok"
-               data-slug="leaf-policy-crit-ok" data-name="Policy: Crit operator OK" data-role="OP / Leaf" data-abbr="OP"
-               data-valid="true" data-scenario="17"
-               onclick="selectNode('leaf-policy-crit-ok')" onmouseenter="showTip(event,'leaf-policy-crit-ok')" onmouseleave="hideTip()">
-            <div class="node-status-dot"></div>
-            <div class="node-role">Leaf · Policy ✓</div>
-            <div class="node-abbr">OP</div>
-            <div class="node-name">Policy: Crit operator OK</div>
-            <div class="node-ep" id="ep-leaf-policy-crit-ok">/leaf-policy-crit-ok/.well-known/openid-federation</div>
-            <div class="node-badge">S17</div>
-          </div>
+
         </div>
       </div>
 
@@ -894,7 +638,7 @@ body {
   <aside class="side-panel" id="sidePanel">
     <div class="sp-empty" id="spEmpty">
       <div class="sp-empty-icon">⛓</div>
-      <div>Selecteer een node om details te zien</div>
+      <div>Selecteer een node</div>
       <div style="font-size:.72rem;color:var(--text-dim);margin-top:4px">Klik op een entiteit in het diagram</div>
     </div>
     <div id="spContent" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
@@ -902,23 +646,34 @@ body {
         <div class="sp-title" id="spTitle">—</div>
         <div class="sp-role" id="spRole">—</div>
       </div>
+      <div class="sp-tabs">
+        <button class="sp-tab active" data-tab="flow" onclick="setPanelTab('flow')">Flow</button>
+        <button class="sp-tab" data-tab="swagger" onclick="setPanelTab('swagger')">Swagger</button>
+        <button class="sp-tab" data-tab="chain" onclick="setPanelTab('chain')">Chain</button>
+        <button class="sp-tab" data-tab="policies" onclick="setPanelTab('policies')">Policies</button>
+        <button class="sp-tab" data-tab="raw" onclick="setPanelTab('raw')">Raw</button>
+      </div>
       <div class="sp-body" id="spBody"></div>
     </div>
   </aside>
 
-</div><!-- /main -->
+</div>
 
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-let baseUrl = '';
-let selectedSlug = null;
-const nodeCredentials = {}; // slug -> latest issued credential JWT
-const walletUrlStorageKey = 'walletBackendVerifyUrl';
-const nodeResults   = {};  // slug → true|false|undefined
-const nodeScenario  = {};  // slug → full scenario run result object
+const DEFAULT_BASE_URL         = 'https://federationtest-production.up.railway.app';
+const DEFAULT_TRUST_ANCHOR_ID  = 'https://federationtest-production.up.railway.app/anchor';
 
-// ── Trust anchor path per node (null = geen geldig chain pad) ──
+let baseUrl = DEFAULT_BASE_URL;
+let selectedSlug = null;
+let activePanelTab = 'flow';
+
+const nodeCredentials   = {};
+const nodeWalletResults = {};
+const nodeResults       = {};
+const nodeScenario      = {};
+
 const ANCHOR_FOR = {
   'leaf':                '/anchor',
   'leaf2':               '/anchor',
@@ -933,12 +688,11 @@ const ANCHOR_FOR = {
   'leaf-policy-crit-ok': '/anchor',
   'leaf-deep':           '/anchor',
   'leaf-maxpath':        '/anchor',
-  'leaf-wronganchor':    '/rogue',   // scenario 11: bewust verkeerd anchor
-  'rogue':               null,       // niet in federatie
-  'leaf-nohint':         null,       // geen geldig hint pad
+  'leaf-wronganchor':    '/rogue',
+  'rogue':               null,
+  'leaf-nohint':         null,
 };
 
-// ── Scenario IDs per node-id (node-id !== always slug for special cases) ──
 const SCENARIO_ID = {
   'leaf':                1,
   'leaf2':               2,
@@ -949,7 +703,7 @@ const SCENARIO_ID = {
   'leaf-policy-jwks':    7,
   'leaf-multihint':      9,
   'leaf-nohint':         10,
-  'leaf-wronganchor':    11,  // same slug as leaf but different anchor
+  'leaf-wronganchor':    11,
   'leaf-subwrong':       12,
   'leaf-deep':           13,
   'leaf-maxpath':        14,
@@ -958,19 +712,18 @@ const SCENARIO_ID = {
   'leaf-policy-crit-ok': 17,
 };
 
-// ── Parent relationships (for display of fetch endpoint) ──
 const PARENTS = {
-  'anchor':           null,
-  'intermediate':     'anchor',
-  'intermediate2':    'anchor',
-  'leaf':             'intermediate',
-  'leaf2':            'intermediate2',
-  'leaf-expired':     'intermediate',
-  'leaf-wrongkey':    'intermediate',
-  'leaf-subwrong':    'intermediate',
-  'leaf-multihint':   'intermediate',
-  'leaf-nohint':      null,
-  'rogue':            null,
+  'anchor':              null,
+  'intermediate':        'anchor',
+  'intermediate2':       'anchor',
+  'leaf':                'intermediate',
+  'leaf2':               'intermediate2',
+  'leaf-expired':        'intermediate',
+  'leaf-wrongkey':       'intermediate',
+  'leaf-subwrong':       'intermediate',
+  'leaf-multihint':      'intermediate',
+  'leaf-nohint':         null,
+  'rogue':               null,
   'leaf-policy-type':    'intermediate',
   'leaf-policy-jwks':    'intermediate',
   'leaf-deep':           'inter-depth-1',
@@ -981,7 +734,7 @@ const PARENTS = {
   'leaf-policy-crit-ok': 'intermediate',
 };
 
-// ── Connections: [parent-slug, child-slug] ──
+// Edges used for SVG connectors in the main pipeline
 const EDGES = [
   ['anchor','intermediate'],
   ['anchor','intermediate2'],
@@ -991,25 +744,50 @@ const EDGES = [
   ['intermediate','leaf-subwrong'],
   ['intermediate','leaf-multihint'],
   ['intermediate','leaf-nohint'],
+  ['intermediate','leaf-policy-type'],
+  ['intermediate','leaf-policy-jwks'],
+  ['intermediate','leaf-policy-type-ok'],
+  ['intermediate','leaf-policy-jwks-ok'],
+  ['intermediate','leaf-policy-crit-ok'],
   ['intermediate2','leaf2'],
 ];
 
 const CAN_ISSUE = new Set(Object.keys(SCENARIO_ID).filter(k => k !== 'leaf-wronganchor'));
 
 // ── Helpers ──
+function trustAnchorFor(slug) {
+  const p = ANCHOR_FOR[slug];
+  if (!p) return null;
+  if (p === '/anchor') return DEFAULT_TRUST_ANCHOR_ID;
+  return baseUrl + p;
+}
+
+function walletHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  const key = document.getElementById('walletApiKey')?.value.trim();
+  if (key) h['X-API-Key'] = key;
+  return h;
+}
+
 function decodePayload(jwt) {
   try { return JSON.parse(atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); }
   catch { return null; }
 }
-function fmtExp(epoch) {
+
+function fmtTime(epoch) {
   if (!epoch) return '?';
   return new Date(epoch*1000).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
+
 function isExpired(e) { return e && e < Math.floor(Date.now()/1000); }
+
 function esc(s) {
-  if (!s) return '';
+  if (s === null || s === undefined) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+function statusCls(v) { return v === true ? 'pass' : v === false ? 'fail' : 'pending'; }
+function statusTxt(v) { return v === true ? '✓' : v === false ? '✗' : '—'; }
 
 // ── Node status ──
 function setNodeStatus(slug, status) {
@@ -1017,6 +795,8 @@ function setNodeStatus(slug, status) {
   if (!el) return;
   el.classList.remove('checking','pass','fail');
   if (status !== 'reset') el.classList.add(status);
+  const dot = el.querySelector('.node-dot');
+  if (dot) dot.textContent = status === 'pass' ? '✓' : status === 'fail' ? '✗' : status === 'checking' ? '↻' : '—';
   updateEdgeColors();
   if (selectedSlug === slug) refreshPanel(slug);
 }
@@ -1024,119 +804,69 @@ function setNodeStatus(slug, status) {
 function updateEdgeColors() {
   document.querySelectorAll('#connSvg path').forEach(el => {
     el.classList.remove('pass','fail');
-    const [a, b] = (el.dataset.edge || '').split('→');
+    const [a,b] = (el.dataset.edge||'').split('→');
     if (!a || !b) return;
-    const aOk = nodeResults[a], bOk = nodeResults[b];
-    if (aOk === true && bOk === true)  el.classList.add('pass');
-    else if (aOk === false || bOk === false) el.classList.add('fail');
+    if (nodeResults[a] === true && nodeResults[b] === true) el.classList.add('pass');
+    else if (nodeResults[a] === false || nodeResults[b] === false) el.classList.add('fail');
   });
 }
 
-// ── Run scenario via backend API (for leaf nodes) ──
-async function runScenario(scenarioId) {
-  const r = await fetch(`/test-scenarios/${scenarioId}/run?includeCredential=false`, { method:'POST' });
+// ── Run scenario ──
+async function runScenario(id) {
+  const r = await fetch(`${baseUrl}/test-scenarios/${id}/run?includeCredential=false`, { method:'POST' });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }
 
-// ── Check infrastructure node (anchor / intermediate) via entity config ──
 async function checkInfraNode(slug) {
   setNodeStatus(slug, 'checking');
   let checks = [];
   try {
-    const r = await fetch(`/${slug}/.well-known/openid-federation`);
+    const r = await fetch(`${baseUrl}/${slug}/.well-known/openid-federation`);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const jwt = await r.text();
     const p = decodePayload(jwt);
     checks.push({ type:'ok', text:'Entity config bereikbaar' });
     if (p?.iss) checks.push({ type:'ok', text:`iss: ${p.iss}` });
     const exp = p?.exp;
-    if (exp) {
-      if (isExpired(exp)) {
-        checks.push({ type:'fail', text:`Config verlopen: ${fmtExp(exp)}` });
-        nodeResults[slug] = false;
-      } else {
-        checks.push({ type:'ok', text:`Config geldig t/m ${fmtExp(exp)}` });
-        nodeResults[slug] = true;
-      }
-    } else {
-      nodeResults[slug] = true;
-    }
-    if (p?.authority_hints?.length) {
-      p.authority_hints.forEach(h => checks.push({ type:'warn', text:`authority_hint: ${h}` }));
-    }
-    // For intermediates: also verify their subordinate statement from anchor
-    const parentSlug = PARENTS[slug];
-    if (parentSlug) {
+    if (exp && isExpired(exp)) { checks.push({ type:'fail', text:`Config verlopen: ${fmtTime(exp)}` }); nodeResults[slug] = false; }
+    else if (exp)              { checks.push({ type:'ok',   text:`Config geldig t/m ${fmtTime(exp)}` }); nodeResults[slug] = true; }
+    else                       { nodeResults[slug] = true; }
+    if (p?.authority_hints?.length) p.authority_hints.forEach(h => checks.push({ type:'warn', text:`authority_hint: ${h}` }));
+    const parent = PARENTS[slug];
+    if (parent) {
       const sub = encodeURIComponent(baseUrl + '/' + slug);
-      const sr = await fetch(`/${parentSlug}/fetch?sub=${sub}`);
-      if (!sr.ok) {
-        checks.push({ type:'fail', text:`Subordinate stmt van ${parentSlug}: HTTP ${sr.status}` });
-        nodeResults[slug] = false;
-      } else {
-        const sjwt = await sr.text();
-        const sp = decodePayload(sjwt);
-        checks.push({ type:'ok', text:`Subordinate stmt van ${parentSlug} aanwezig` });
-        if (sp?.exp && isExpired(sp.exp)) {
-          checks.push({ type:'fail', text:`Sub stmt verlopen: ${fmtExp(sp.exp)}` });
-          nodeResults[slug] = false;
-        } else if (sp?.exp) {
-          checks.push({ type:'ok', text:`Sub stmt geldig t/m ${fmtExp(sp.exp)}` });
-        }
+      const sr = await fetch(`${baseUrl}/${parent}/fetch?sub=${sub}`);
+      if (!sr.ok) { checks.push({ type:'fail', text:`Sub stmt van ${parent}: HTTP ${sr.status}` }); nodeResults[slug] = false; }
+      else {
+        const sp = decodePayload(await sr.text());
+        checks.push({ type:'ok', text:`Sub stmt van ${parent} aanwezig` });
+        if (sp?.exp && isExpired(sp.exp)) { checks.push({ type:'fail', text:`Sub stmt verlopen: ${fmtTime(sp.exp)}` }); nodeResults[slug] = false; }
+        else if (sp?.exp) checks.push({ type:'ok', text:`Sub stmt geldig t/m ${fmtTime(sp.exp)}` });
       }
     }
-  } catch(e) {
-    checks.push({ type:'fail', text:e.message });
-    nodeResults[slug] = false;
-  }
+  } catch(e) { checks.push({ type:'fail', text: e.message }); nodeResults[slug] = false; }
   nodeResults[slug + '__checks'] = checks;
   setNodeStatus(slug, nodeResults[slug] ? 'pass' : 'fail');
 }
 
-// ── Check leaf node: run the actual trust chain scenario ──
-// nodeId is the HTML element id suffix (may differ from slug for special cases like leaf-wronganchor)
 async function checkLeafNode(nodeId) {
-  const slug = nodeId;
   setNodeStatus(nodeId, 'checking');
   const scenarioId = SCENARIO_ID[nodeId];
   let checks = [];
   try {
     const result = await runScenario(scenarioId);
-    nodeScenario[slug] = result;
-
-    // Entity config reachable?
+    nodeScenario[nodeId] = result;
     checks.push({ type:'ok', text:`Scenario #${result.id}: "${result.title}"` });
-
-    if (result.trace?.entityConfigurationUrl) {
-      checks.push({ type:'ok', text:`Entity config: ${result.trace.entityConfigurationUrl}` });
-    }
-
-    if (result.trace?.authorityHints?.length) {
-      result.trace.authorityHints.forEach(h =>
-        checks.push({ type:'warn', text:`authority_hint: ${h}` })
-      );
-    }
-
-    if (result.trace?.expectedFetchCalls?.length) {
-      result.trace.expectedFetchCalls.forEach(url =>
-        checks.push({ type:'ok', text:`fetch: ${url}` })
-      );
-    }
-
-    if (result.trace?.policySummary) {
-      checks.push({ type:'warn', text:`Policy: ${result.trace.policySummary}` });
-    }
-
-    if (result.error) {
-      checks.push({ type:'fail', text:`Fout: ${result.error}` });
-    }
-
-    // passed = actualTrusted matches expectedTrusted
-    const statusOk = result.passed;
-    nodeResults[nodeId] = statusOk;
-    setNodeStatus(nodeId, statusOk ? 'pass' : 'fail');
+    if (result.trace?.entityConfigurationUrl) checks.push({ type:'ok', text:`Entity config: ${result.trace.entityConfigurationUrl}` });
+    if (result.trace?.authorityHints?.length) result.trace.authorityHints.forEach(h => checks.push({ type:'warn', text:`authority_hint: ${h}` }));
+    if (result.trace?.expectedFetchCalls?.length) result.trace.expectedFetchCalls.forEach(u => checks.push({ type:'ok', text:`fetch: ${u}` }));
+    if (result.trace?.policySummary) checks.push({ type:'warn', text:`Policy: ${result.trace.policySummary}` });
+    if (result.error) checks.push({ type:'fail', text:`Fout: ${result.error}` });
+    nodeResults[nodeId] = result.passed;
+    setNodeStatus(nodeId, result.passed ? 'pass' : 'fail');
   } catch(e) {
-    checks.push({ type:'fail', text:`Scenario run mislukt: ${e.message}` });
+    checks.push({ type:'fail', text:`Scenario mislukt: ${e.message}` });
     nodeResults[nodeId] = false;
     setNodeStatus(nodeId, 'fail');
   }
@@ -1144,270 +874,369 @@ async function checkLeafNode(nodeId) {
   if (selectedSlug === nodeId) refreshPanel(nodeId);
 }
 
-// ── Run all ──
 async function runAll() {
   const btn = document.getElementById('btnRun');
-  btn.textContent = '⏳ Bezig…';
-  btn.classList.add('running');
-  btn.disabled = true;
+  btn.textContent = '⏳ Bezig…'; btn.classList.add('running'); btn.disabled = true;
   document.getElementById('runSummary').style.display = 'none';
 
   const allSlugs = Array.from(document.querySelectorAll('.node[data-slug]')).map(n => n.dataset.slug);
   allSlugs.forEach(s => { setNodeStatus(s,'reset'); nodeResults[s] = undefined; delete nodeScenario[s]; });
 
-  // Infrastructure nodes first (sequential to avoid race)
   for (const slug of ['anchor','intermediate','intermediate2']) {
     if (allSlugs.includes(slug)) await checkInfraNode(slug);
   }
 
-  // Leaf nodes — run in parallel
-  const leafNodeIds = Array.from(document.querySelectorAll('.node[data-scenario]'))
+  const leafIds = Array.from(document.querySelectorAll('.node[data-scenario]'))
     .map(n => n.id.replace('node-',''))
     .filter(id => SCENARIO_ID[id] !== undefined);
-  await Promise.all(leafNodeIds.map(id => checkLeafNode(id)));
+  await Promise.all(leafIds.map(id => checkLeafNode(id)));
 
-  // Summary
   const passed = allSlugs.filter(s => nodeResults[s] === true).length;
   const failed = allSlugs.filter(s => nodeResults[s] === false).length;
   document.getElementById('sumPassed').textContent = passed + ' ✓';
   document.getElementById('sumFailed').textContent = failed + ' ✗';
   document.getElementById('sumTotal').textContent  = allSlugs.length + ' totaal';
-  document.getElementById('runSummary').style.display = 'flex';
-  document.getElementById('runSummary').style.gap = '6px';
-  document.getElementById('runSummary').style.alignItems = 'center';
+  const rs = document.getElementById('runSummary');
+  rs.style.display = 'flex'; rs.style.gap = '6px'; rs.style.alignItems = 'center';
 
-  btn.textContent = '↺ Opnieuw valideren';
-  btn.classList.remove('running');
-  btn.disabled = false;
+  btn.textContent = '↺ Opnieuw'; btn.classList.remove('running'); btn.disabled = false;
 }
 
 // ── Select node ──
 function selectNode(slug) {
-  if (selectedSlug) {
-    const prev = document.getElementById('node-' + selectedSlug);
-    if (prev) prev.classList.remove('selected');
-  }
+  if (selectedSlug) { const p = document.getElementById('node-' + selectedSlug); if (p) p.classList.remove('selected'); }
   selectedSlug = slug;
   const el = document.getElementById('node-' + slug);
   if (el) el.classList.add('selected');
   refreshPanel(slug);
 }
 
-// ── Side panel ──
+// ── Panel tab ──
+function setPanelTab(tab) {
+  activePanelTab = tab;
+  document.querySelectorAll('.sp-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.dataset.tab === tab));
+}
+
+// ── Build Flow tab: pre-visualization + post-validation ──
+function buildFlowTab(slug) {
+  const el = document.getElementById('node-' + slug);
+  const expectedValid = el?.dataset.valid;
+  const scenResult = nodeScenario[slug];
+  const walletResult = nodeWalletResults[slug];
+  const isLeaf = !!SCENARIO_ID[slug];
+  const anchorUrl = trustAnchorFor(slug);
+  const realSlug = slug === 'leaf-wronganchor' ? 'leaf' : slug;
+
+  // Status
+  const status = nodeResults[slug];
+  let statusHtml = '';
+  if (status === undefined) {
+    statusHtml = `<div class="status-row pending">⏺ Nog niet gevalideerd</div>`;
+  } else if (status === true) {
+    const lbl = scenResult?.passed ? `Scenario geslaagd · verwacht=${scenResult.expectedTrusted?'geldig':'ongeldig'}, actueel=${scenResult.actualTrusted?'geldig':'ongeldig'}` : '✓ Bereikbaar';
+    statusHtml = `<div class="status-row pass">✓ ${esc(lbl)}</div>`;
+  } else {
+    const err = scenResult?.error ? esc(scenResult.error.substring(0,100)) : 'Zie trace hieronder';
+    statusHtml = `<div class="status-row fail">✗ Mislukt — ${err}</div>`;
+  }
+
+  // Expected outcome badge
+  let expectedHtml = '';
+  if (expectedValid !== undefined) {
+    const v = expectedValid === 'true';
+    if (scenResult) {
+      const passed = scenResult.passed;
+      expectedHtml = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span class="outcome-badge ${v?'pass':'fail'}">Verwacht: ${v?'✓ geldig':'✗ ongeldig'}</span>
+        <span style="color:var(--text-dim)">→</span>
+        <span class="outcome-badge ${scenResult.actualTrusted?'pass':'fail'}">Actueel: ${scenResult.actualTrusted?'✓ geldig':'✗ ongeldig'}</span>
+        <span class="outcome-badge ${passed?'pass':'fail'}">${passed?'TEST OK':'TEST FAIL'}</span>
+      </div>`;
+    } else {
+      expectedHtml = `<div><span class="outcome-badge ${v?'pass':'fail'}">Verwacht: ${v?'✓ geldig':'✗ ongeldig'}</span></div>`;
+    }
+  }
+
+  // Flow steps (pre-visualization when not yet run, actual when run)
+  const flowSteps = [
+    {
+      name: '1. Entity Configuration ophalen',
+      detail: `${baseUrl}/${realSlug}/.well-known/openid-federation`,
+      state: status,
+      hint: 'GET .well-known/openid-federation → JWT met iss, sub, authority_hints, jwks'
+    },
+    {
+      name: '2. Authority hints → Trust Anchor',
+      detail: scenResult?.trace?.authorityHints?.join(' → ') || (anchorUrl ? `Verwacht: authority_hint → ${anchorUrl}` : 'Geen geldig trust anchor pad'),
+      state: anchorUrl ? (scenResult ? (scenResult.actualTrusted !== undefined ? scenResult.actualTrusted : undefined) : undefined) : false,
+      hint: 'Volgt authority_hints tot Trust Anchor is bereikt'
+    },
+    {
+      name: '3. Trust chain opbouwen (fetch calls)',
+      detail: scenResult?.trace?.expectedFetchCalls?.join(' | ') || `${anchorUrl ? anchorUrl + '/fetch?sub=…' : 'Geen geldig pad'}`,
+      state: scenResult ? scenResult.passed : undefined,
+      hint: 'Trust Anchor fetcht subordinate statements om keten te valideren'
+    },
+    {
+      name: '4. Metadata policy toepassen',
+      detail: scenResult?.trace?.policySummary || 'Zichtbaar na validatie',
+      state: scenResult?.trace?.policySummary ? (scenResult.passed ? true : false) : undefined,
+      hint: 'Intermediates kunnen metadata_policy meegeven die verplicht wordt'
+    },
+    {
+      name: '5. Credential uitgifte',
+      detail: CAN_ISSUE.has(slug) ? `POST /issue · issuer: ${realSlug} · type: DiplomaCertificate` : 'Deze node geeft geen test-credential uit',
+      state: nodeCredentials[slug] ? true : undefined,
+      hint: 'Haalt een gesigneerd credential JWT op bij de issuer'
+    },
+    {
+      name: '6. Wallet backend verificatie',
+      detail: document.getElementById('walletBackendUrl')?.value || 'http://localhost:8088/api/v2/credential/raw/verify',
+      state: walletResult ? (walletResult.status === 'VALID') : undefined,
+      hint: 'POST credential_token + trust_anchor_entity_id → VALID / INVALID'
+    }
+  ];
+
+  const stepsHtml = `<div class="flow-steps">${flowSteps.map((s,i) => `
+    <div class="flow-step ${statusCls(s.state)}" title="${esc(s.hint)}">
+      <div class="flow-num">${i+1}</div>
+      <div>
+        <div class="flow-name">${esc(s.name)}</div>
+        <div class="flow-detail">${esc(s.detail)}</div>
+      </div>
+      <div class="flow-badge">${statusTxt(s.state)}</div>
+    </div>`).join('')}</div>`;
+
+  // Checks
+  const checks = nodeResults[slug + '__checks'] || [];
+  const checksHtml = checks.length ? `
+    <div>
+      <div class="sec-label">Trace / resultaten</div>
+      <div class="check-list">${checks.map(c => `<div class="check-row"><span class="cr-${c.type}">${c.type==='ok'?'✓':c.type==='fail'?'✗':'⚠'}</span><span class="cr-dim">${esc(c.text)}</span></div>`).join('')}</div>
+    </div>` : '';
+
+  return `${statusHtml}${expectedHtml}${stepsHtml}${checksHtml}`;
+}
+
+// ── Build Swagger tab ──
+function buildSwaggerTab(slug) {
+  const el = document.getElementById('node-' + slug);
+  const realSlug = slug === 'leaf-wronganchor' ? 'leaf' : slug;
+  const anchorUrl = trustAnchorFor(slug);
+  const walletEndpoint = document.getElementById('walletBackendUrl')?.value || 'http://localhost:8088/api/v2/credential/raw/verify';
+  const jwt = nodeCredentials[slug] || null;
+
+  const swaggerPayload = {
+    credential_token: jwt || '<credential_token — klik Generate JWT>',
+    trust_anchor_entity_id: anchorUrl || '<geen geldig trust anchor pad>'
+  };
+
+  const anchorWarning = !anchorUrl
+    ? `<div class="status-row warn">⚠ Geen geldig trust anchor voor deze node — verificatie zal altijd mislukken</div>`
+    : '';
+
+  const issuePayload = { issuer: realSlug, credentialType: 'DiplomaCertificate' };
+
+  const canIssue = CAN_ISSUE.has(slug);
+
+  return `
+    ${anchorWarning}
+
+    ${canIssue ? `
+    <div>
+      <div class="sec-label">Stap 1 — Generate JWT</div>
+      <button class="btn-action primary" id="jwt-btn-${slug}" onclick="fetchJwt('${slug}')">
+        ⚡ Generate JWT (POST /issue)
+      </button>
+    </div>
+
+    <div>
+      <div class="sec-label">Stap 2 — Klaar voor Swagger</div>
+      <div class="swagger-ready ${jwt ? 'visible' : ''}" id="swagger-box-${slug}">
+        <div class="swagger-head">
+          <span class="swagger-method">POST</span>
+          <span class="swagger-endpoint">${esc(walletEndpoint)}</span>
+          <span class="swagger-head-label">body →</span>
+        </div>
+        <pre class="swagger-pre" id="swagger-pre-${slug}">${esc(JSON.stringify(swaggerPayload, null, 2))}</pre>
+        <div class="swagger-actions">
+          <button class="swagger-btn" onclick="copySwaggerPayload('${slug}')">📋 Kopieer voor Swagger</button>
+          <button class="swagger-btn" onclick="verifyWithWalletBackend('${slug}')">▶ Verify via wallet</button>
+        </div>
+      </div>
+      ${!jwt ? `<div style="font-size:.7rem;color:var(--text-dim);margin-top:6px;">Klik eerst op "Generate JWT" — het credential_token wordt dan automatisch ingevuld.</div>` : ''}
+    </div>
+
+    <div class="wallet-result ${nodeWalletResults[slug] ? 'visible ' + (nodeWalletResults[slug].status === 'VALID' ? 'valid' : 'invalid') : ''}" id="wallet-result-${slug}">
+      ${nodeWalletResults[slug] ? renderWalletResultHtml(nodeWalletResults[slug].data, nodeWalletResults[slug].payload) : ''}
+    </div>
+
+    <hr class="sp-hr">
+    <div>
+      <div class="sec-label">POST /issue — request body</div>
+      <pre class="swagger-pre" style="border:1px solid var(--border);border-radius:6px;">${esc(JSON.stringify(issuePayload, null, 2))}</pre>
+    </div>
+    ` : `<div class="status-row pending">Deze node heeft geen credential issuance.</div>`}
+
+    <div>
+      <div class="sec-label">Trust Anchor Entity ID</div>
+      ${anchorUrl
+        ? `<div class="url-box"><span class="url-label">trust_anchor_entity_id</span><span id="ta-url-${slug}">${esc(anchorUrl)}</span><button class="copy-btn" onclick="copyText(document.getElementById('ta-url-${slug}').textContent,this)">kopieer</button></div>`
+        : `<div class="status-row warn">⚠ Geen geldig trust anchor pad</div>`}
+    </div>`;
+}
+
+// ── Build Chain tab ──
+function buildChainTab(slug) {
+  const anchorUrl = trustAnchorFor(slug);
+  const parent = PARENTS[slug];
+  const realSlug = slug === 'leaf-wronganchor' ? 'leaf' : slug;
+  const ecUrl    = `${baseUrl}/${realSlug}/.well-known/openid-federation`;
+  const listUrl  = `${baseUrl}/${realSlug}/list`;
+  const fetchUrl = parent ? `${baseUrl}/${parent}/fetch?sub=${encodeURIComponent(baseUrl+'/'+realSlug)}` : null;
+
+  const chainNodes = [];
+  if (anchorUrl) chainNodes.push({ label: anchorUrl.includes('/rogue') ? 'Rogue Trust Anchor' : 'Trust Anchor', url: anchorUrl, state: nodeResults[anchorUrl.includes('/rogue') ? 'rogue' : 'anchor'] });
+  else chainNodes.push({ label: 'Geen geldig trust anchor pad', url: 'Resolver kan geen geldige anchor bereiken', state: false });
+  if (parent && !['anchor','intermediate','intermediate2'].includes(slug)) {
+    chainNodes.push({ label: `Intermediate (${parent})`, url: `${baseUrl}/${parent}`, state: nodeResults[parent] });
+  }
+  if (!['anchor','intermediate','intermediate2'].includes(slug)) {
+    chainNodes.push({ label: 'Credential issuer (leaf)', url: `${baseUrl}/${realSlug}`, state: nodeResults[slug] });
+  }
+
+  const scenResult = nodeScenario[slug];
+
+  return `
+    <div class="chain-tree">
+      ${chainNodes.map(n => `
+        <div class="chain-item ${statusCls(n.state)}">
+          <div class="chain-label">${esc(n.label)}</div>
+          <div class="chain-meta">${esc(n.url)}</div>
+        </div>`).join('')}
+    </div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-title">Authority hints</div>
+        <div class="info-card-value">${esc(scenResult?.trace?.authorityHints?.join('\n') || 'Beschikbaar na scenario-run')}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">Fetch calls</div>
+        <div class="info-card-value">${esc(scenResult?.trace?.expectedFetchCalls?.join('\n') || fetchUrl || 'N.v.t.')}</div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-label">Entity configuration</div>
+      <div class="url-box"><span class="url-label">GET /${realSlug}/.well-known/openid-federation</span>${esc(ecUrl)}<button class="copy-btn" onclick="copyText('${esc(ecUrl).replace(/'/g,"\\'")}',this)">kopieer</button></div>
+    </div>
+    ${fetchUrl ? `<div><div class="sec-label">Subordinate statement (van ${parent})</div><div class="url-box"><span class="url-label">GET /${parent}/fetch?sub=…</span>${esc(fetchUrl)}<button class="copy-btn" onclick="copyText('${esc(fetchUrl).replace(/'/g,"\\'")}',this)">kopieer</button></div></div>` : ''}
+    ${['anchor','intermediate','intermediate2'].includes(realSlug) ? `<div><div class="sec-label">Subordinate list</div><div class="url-box"><span class="url-label">GET /${realSlug}/list</span>${esc(listUrl)}</div></div>` : ''}`;
+}
+
+// ── Build Policies tab ──
+function buildPoliciesTab(slug) {
+  const scenResult = nodeScenario[slug];
+  const walletResult = nodeWalletResults[slug];
+  const walletPolicies = walletResult?.data?.credential_verify_policy_results || [];
+
+  const fedPolicy = scenResult?.trace?.policySummary
+    ? `<div class="policy-card warn"><div class="policy-name">Federation metadata_policy</div><div class="policy-desc">${esc(scenResult.trace.policySummary)}</div></div>`
+    : `<div class="policy-card"><div class="policy-name">Federation metadata_policy</div><div class="policy-desc">Geen policy-summary ontvangen (of nog niet gevalideerd).</div></div>`;
+
+  const walletHtml = walletPolicies.length
+    ? walletPolicies.map(p => `<div class="policy-card ${p.valid?'ok':'fail'}"><div class="policy-name">${p.valid?'✓ OK':'✗ FAIL'} ${esc(p.policyName||'policy')}</div><div class="policy-desc">${esc(p.policyDescription||'')}</div></div>`).join('')
+    : `<div class="policy-card"><div class="policy-name">Wallet policies</div><div class="policy-desc">Nog geen wallet verify uitgevoerd.</div></div>`;
+
+  return `<div class="policy-grid">${fedPolicy}${walletHtml}</div>`;
+}
+
+// ── Build Raw tab ──
+function buildRawTab(slug) {
+  const scenResult = nodeScenario[slug];
+  const walletResult = nodeWalletResults[slug];
+  const checks = nodeResults[slug + '__checks'] || [];
+  return `
+    <details open style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <summary style="padding:8px 12px;cursor:pointer;background:var(--surface2);font-size:.78rem;font-weight:600;">Scenario result</summary>
+      <pre style="padding:10px 12px;font-family:'Fira Code',monospace;font-size:.6rem;color:var(--text-mid);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;">${esc(JSON.stringify(scenResult||{message:'Nog geen run'},null,2))}</pre>
+    </details>
+    <details style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <summary style="padding:8px 12px;cursor:pointer;background:var(--surface2);font-size:.78rem;font-weight:600;">Checks</summary>
+      <pre style="padding:10px 12px;font-family:'Fira Code',monospace;font-size:.6rem;color:var(--text-mid);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;">${esc(JSON.stringify(checks,null,2))}</pre>
+    </details>
+    <details style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <summary style="padding:8px 12px;cursor:pointer;background:var(--surface2);font-size:.78rem;font-weight:600;">Wallet result</summary>
+      <pre style="padding:10px 12px;font-family:'Fira Code',monospace;font-size:.6rem;color:var(--text-mid);white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;">${esc(JSON.stringify(walletResult||{message:'Nog geen wallet verify'},null,2))}</pre>
+    </details>`;
+}
+
+// ── Refresh panel ──
 function refreshPanel(slug) {
   const el = document.getElementById('node-' + slug);
   if (!el) return;
-  const name = el.dataset.name;
-  const role = el.dataset.role;
-  const checks = nodeResults[slug + '__checks'] || [];
-  const status = nodeResults[slug];
-  const expectedValid = el.dataset.valid;
-  const scenario = el.dataset.scenario;
-  const scenResult = nodeScenario[slug];
-
   document.getElementById('spEmpty').style.display = 'none';
   const spContent = document.getElementById('spContent');
   spContent.style.display = 'flex';
-  document.getElementById('spTitle').textContent = name;
-  document.getElementById('spRole').textContent = role + (scenario ? ` · Scenario ${scenario}` : '');
-
-  const ecUrl    = baseUrl + `/${slug}/.well-known/openid-federation`;
-  const listUrl  = baseUrl + `/${slug}/list`;
-  const parentSlug = PARENTS[slug];
-  const fetchUrl = parentSlug
-    ? `${baseUrl}/${parentSlug}/fetch?sub=${encodeURIComponent(baseUrl+'/'+slug)}`
-    : null;
-
-  // Status bar
-  let statusHtml = '';
-  if (status === undefined) {
-    statusHtml = `<div class="sp-status-row pending">⏺ Nog niet gevalideerd — klik "Valideer trust chains"</div>`;
-  } else if (status === true) {
-    const label = scenResult
-      ? (scenResult.passed ? `✓ Scenario geslaagd — verwacht: ${scenResult.expectedTrusted ? 'geldig' : 'ongeldig'}, actueel: ${scenResult.actualTrusted ? 'geldig' : 'ongeldig'}` : '✓ Bereikbaar')
-      : '✓ Bereikbaar en geldig';
-    statusHtml = `<div class="sp-status-row pass">${label}</div>`;
-  } else {
-    const errMsg = scenResult?.error ? esc(scenResult.error.substring(0,100)) : 'Zie controle resultaten';
-    statusHtml = `<div class="sp-status-row fail">✗ Mislukt — ${errMsg}</div>`;
-  }
-
-  // Expected / actual result
-  let expectedHtml = '';
-  if (expectedValid !== undefined && scenResult) {
-    const exp = scenResult.expectedTrusted;
-    const act = scenResult.actualTrusted;
-    expectedHtml = `
-      <div style="display:flex;gap:8px;font-size:.75rem;font-weight:700;">
-        <span style="color:${exp?'var(--green)':'var(--red)'}">Verwacht: ${exp?'✅ geldig':'❌ ongeldig'}</span>
-        <span style="color:var(--border2)">→</span>
-        <span style="color:${act?'var(--green)':'var(--red)'}">Actueel: ${act?'✅ geldig':'❌ ongeldig'}</span>
-        <span style="color:${scenResult.passed?'var(--green)':'var(--red)'};">${scenResult.passed?'· TEST GESLAAGD':'· TEST MISLUKT'}</span>
-      </div>`;
-  } else if (expectedValid !== undefined) {
-    const v = expectedValid === 'true';
-    expectedHtml = `<div style="font-size:.72rem;color:${v?'var(--green)':'var(--red)'};font-weight:700;">${v?'✅ Verwacht: geldig':'❌ Verwacht: ongeldig'}</div>`;
-  }
-
-  // Checks / trace
-  let checksHtml = '';
-  if (checks.length) {
-    checksHtml = `<div>
-      <div class="sp-section-label">Trace / controle resultaten</div>
-      <div class="check-result">
-        ${checks.map(c => `<div class="cr-row"><span class="cr-${c.type}">${c.type==='ok'?'✓':c.type==='fail'?'✗':'⚠'}</span><span class="cr-dim">${esc(c.text)}</span></div>`).join('')}
-      </div>
-    </div>`;
-  }
-
-  // Endpoints section
-  const copyEc  = `<button class="copy-btn" onclick="copyText('${ecUrl}', this)">kopieer</button>`;
-  const copyList = `<button class="copy-btn" onclick="copyText('${listUrl}', this)">kopieer</button>`;
-
-  let fetchSection = '';
-  if (fetchUrl) {
-    const safeFetchId = 'sp-fetch-' + slug.replace(/-/g,'_');
-    fetchSection = `
-      <div>
-        <div class="sp-section-label">Subordinate statement (van parent: ${esc(parentSlug)})</div>
-        <div class="sp-url-box">
-          <span class="url-label">GET /${parentSlug}/fetch?sub=…</span>
-          <span id="${safeFetchId}">${esc(fetchUrl)}</span>
-          <button class="copy-btn" onclick="copyText(document.getElementById('${safeFetchId}').textContent, this)">kopieer</button>
-        </div>
-      </div>`;
-  }
-
-  // Trust anchor endpoint (for anchor node)
-  let anchorFetchSection = '';
-  if (slug === 'anchor') {
-    anchorFetchSection = `
-      <div>
-        <div class="sp-section-label">Fetch endpoint (subordinates ophalen)</div>
-        <div class="sp-url-box">
-          <span class="url-label">GET /anchor/fetch?sub={entity-id}</span>
-          <span>${esc(baseUrl + '/anchor/fetch?sub=')}<span style="color:var(--text-dim)">…</span></span>
-        </div>
-      </div>
-      <div>
-        <div class="sp-section-label">Subordinate list</div>
-        <div class="sp-url-box">
-          <span class="url-label">GET /anchor/list</span>
-          <span>${esc(baseUrl + '/anchor/list')}</span>
-          ${copyList}
-        </div>
-      </div>`;
-  }
-
-  // Trust anchor URL for this node (null = no valid chain)
-  const anchorPath = ANCHOR_FOR[slug];
-  const anchorUrl  = anchorPath ? baseUrl + anchorPath : null;
-
-  const anchorBlock = anchorUrl
-    ? `<div>
-         <div class="sp-section-label" style="color:var(--amber);">Trust Anchor — gebruik in Swagger / wallet</div>
-         <div class="sp-url-box" style="border-color:#5a3a0a;">
-           <span class="url-label">trustAnchorEntityId</span>
-           <span id="ta-url-${slug}">${esc(anchorUrl)}</span>
-           <button class="copy-btn" onclick="copyText(document.getElementById('ta-url-${slug}').textContent, this)">kopieer</button>
-         </div>
-       </div>`
-    : `<div style="padding:7px 10px;background:#1a1208;border:1px solid #5a3a0a;border-radius:5px;font-size:.72rem;color:#f59e0b;line-height:1.5;">
-         ⚠ Geen geldig trust anchor pad voor deze issuer.<br>
-         <span style="color:var(--text-dim);">JWT kan worden opgehaald maar verificatie zal altijd mislukken.</span>
-       </div>`;
-
-  // JWT section
-  let jwtSection = '';
-  if (CAN_ISSUE.has(slug)) {
-    jwtSection = `
-      <hr class="sp-divider">
-      <div>
-        <div class="sp-section-label">Credential JWT ophalen (/issue)</div>
-        <div style="font-size:.68rem;color:var(--text-dim);margin-bottom:6px;font-family:'Fira Code',monospace;">
-          POST /issue · issuer: ${slug} · type: DiplomaCertificate
-        </div>
-        <button class="btn-get-jwt" id="jwt-btn-${slug}" onclick="fetchJwt('${slug}')">
-          ⚡ Haal verse JWT op
-        </button>
-        <div class="jwt-output" id="jwt-box-${slug}" style="margin-top:8px;">
-          <textarea class="jwt-ta" id="jwt-ta-${slug}" readonly rows="3"></textarea>
-          <div class="jwt-meta" id="jwt-meta-${slug}"></div>
-          <button class="btn-copy-jwt" id="jwt-copy-${slug}" onclick="copyJwt('${slug}')" disabled>📋 Kopieer JWT</button>
-        </div>
-        <button class="btn-get-jwt" id="wallet-btn-${slug}" onclick="verifyWithWalletBackend('${slug}')" style="margin-top:8px;">
-          Verify via wallet backend
-        </button>
-        <div class="wallet-result" id="wallet-result-${slug}" style="margin-top:8px;"></div>
-      </div>
-      ${anchorBlock}`;
-  }
+  document.getElementById('spTitle').textContent = el.dataset.name;
+  const scen = el.dataset.scenario ? ` · Scenario ${el.dataset.scenario}` : '';
+  document.getElementById('spRole').textContent = el.dataset.role + scen;
 
   document.getElementById('spBody').innerHTML = `
-    ${statusHtml}
-    ${expectedHtml}
-    ${checksHtml}
-    <hr class="sp-divider">
-    <div>
-      <div class="sp-section-label">Entity configuration endpoint</div>
-      <div class="sp-url-box">
-        <span class="url-label">GET /${slug}/.well-known/openid-federation</span>
-        ${esc(ecUrl)}
-        ${copyEc}
-      </div>
-    </div>
-    ${fetchSection}
-    ${anchorFetchSection}
-    ${(['anchor','intermediate','intermediate2'].includes(slug) && !anchorFetchSection) ? `<div>
-      <div class="sp-section-label">Subordinate list endpoint</div>
-      <div class="sp-url-box">
-        <span class="url-label">GET /${slug}/list</span>
-        ${esc(listUrl)}
-        ${copyList}
-      </div>
-    </div>` : ''}
-    ${jwtSection}
-  `;
+    <div class="tab-pane ${activePanelTab==='flow'?'active':''}" data-tab="flow">${buildFlowTab(slug)}</div>
+    <div class="tab-pane ${activePanelTab==='swagger'?'active':''}" data-tab="swagger">${buildSwaggerTab(slug)}</div>
+    <div class="tab-pane ${activePanelTab==='chain'?'active':''}" data-tab="chain">${buildChainTab(slug)}</div>
+    <div class="tab-pane ${activePanelTab==='policies'?'active':''}" data-tab="policies">${buildPoliciesTab(slug)}</div>
+    <div class="tab-pane ${activePanelTab==='raw'?'active':''}" data-tab="raw">${buildRawTab(slug)}</div>`;
+
+  setPanelTab(activePanelTab);
 }
 
 // ── JWT fetch ──
 async function fetchJwt(slug) {
-  const btn  = document.getElementById('jwt-btn-' + slug);
-  const box  = document.getElementById('jwt-box-' + slug);
-  const ta   = document.getElementById('jwt-ta-' + slug);
-  const meta = document.getElementById('jwt-meta-' + slug);
-  const copy = document.getElementById('jwt-copy-' + slug);
+  const btn = document.getElementById('jwt-btn-' + slug);
   if (!btn) return;
-  btn.disabled = true;
-  btn.innerHTML = '<span style="opacity:.6">⏳ Ophalen…</span>';
+  btn.disabled = true; btn.innerHTML = '⏳ Ophalen…';
+  const realSlug = slug === 'leaf-wronganchor' ? 'leaf' : slug;
+  const anchorUrl = trustAnchorFor(slug) || DEFAULT_TRUST_ANCHOR_ID;
   try {
-    const r = await fetch('/issue', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ issuer: slug, credentialType: 'DiplomaCertificate' })
+    const r = await fetch(`${baseUrl}/issue`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issuer: realSlug, credentialType: 'DiplomaCertificate' })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
-    nodeCredentials[slug] = d.credentialJwt;
-    ta.value = d.credentialJwt;
-    meta.innerHTML = `<span>iss: <b>${esc(d.issuer)}</b></span><span>kid: <b>${esc(d.kid)}</b></span><span>geldig 1 uur</span>`;
-    box.classList.add('visible');
-    copy.disabled = false;
+    const jwt = d.credentialJwt;
+    nodeCredentials[slug] = jwt;
+
+    // Update the swagger payload display
+    const swaggerPayload = {
+      credential_token: jwt,
+      trust_anchor_entity_id: anchorUrl
+    };
+    const swaggerPre = document.getElementById('swagger-pre-' + slug);
+    if (swaggerPre) swaggerPre.textContent = JSON.stringify(swaggerPayload, null, 2);
+    const swaggerBox = document.getElementById('swagger-box-' + slug);
+    if (swaggerBox) swaggerBox.classList.add('visible');
+    // Remove the hint text if present
+    const hint = swaggerBox?.nextElementSibling;
+    if (hint?.tagName === 'DIV' && hint.textContent.includes('Generate JWT')) hint.remove();
   } catch(e) {
-    ta.value = 'Fout: ' + e.message;
-    meta.innerHTML = '';
-    box.classList.add('visible');
+    const swaggerPre = document.getElementById('swagger-pre-' + slug);
+    if (swaggerPre) swaggerPre.textContent = 'Fout: ' + e.message;
+    const swaggerBox = document.getElementById('swagger-box-' + slug);
+    if (swaggerBox) swaggerBox.classList.add('visible');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '⚡ Haal verse JWT op';
+    btn.disabled = false; btn.innerHTML = '⚡ Generate JWT (POST /issue)';
   }
 }
 
-function copyJwt(slug) {
-  const ta = document.getElementById('jwt-ta-' + slug);
-  if (!ta?.value) return;
-  navigator.clipboard.writeText(ta.value).then(() => {
-    const btn = document.getElementById('jwt-copy-' + slug);
+function copySwaggerPayload(slug) {
+  const pre = document.getElementById('swagger-pre-' + slug);
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    const btn = pre.closest('.swagger-ready')?.querySelector('.swagger-btn');
+    if (!btn) return;
     const orig = btn.textContent;
     btn.textContent = '✓ Gekopieerd!';
     setTimeout(() => btn.textContent = orig, 1500);
@@ -1415,97 +1244,57 @@ function copyJwt(slug) {
 }
 
 async function verifyWithWalletBackend(slug) {
-  const btn = document.getElementById('wallet-btn-' + slug);
-  const result = document.getElementById('wallet-result-' + slug);
-  const endpoint = document.getElementById('walletBackendUrl').value.trim();
-  const anchorPath = ANCHOR_FOR[slug] || '/anchor';
-  const trustAnchor = baseUrl + anchorPath;
+  const walletEndpoint = document.getElementById('walletBackendUrl').value.trim();
+  const anchorUrl = trustAnchorFor(slug) || DEFAULT_TRUST_ANCHOR_ID;
+  const resultEl = document.getElementById('wallet-result-' + slug);
+  const verifyBtn = document.querySelector(`[onclick="verifyWithWalletBackend('${slug}')"]`);
 
-  btn.disabled = true;
-  btn.innerHTML = '<span style="opacity:.6">Wallet backend...</span>';
-  result.className = 'wallet-result visible';
-  result.innerHTML = '<div class="wallet-title">Wallet backend wordt aangeroepen...</div>';
+  if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.textContent = '⏳ Bezig…'; }
+  if (resultEl)  { resultEl.className = 'wallet-result visible'; resultEl.innerHTML = '<div class="wallet-title">Wallet backend wordt aangeroepen…</div>'; }
 
   try {
-    let token = nodeCredentials[slug] || document.getElementById('jwt-ta-' + slug)?.value;
-    if (!token) {
-      await fetchJwt(slug);
-      token = nodeCredentials[slug] || document.getElementById('jwt-ta-' + slug)?.value;
-    }
+    let token = nodeCredentials[slug];
+    if (!token) { await fetchJwt(slug); token = nodeCredentials[slug]; }
     if (!token) throw new Error('Geen credential JWT beschikbaar');
 
-    const payload = {
-      credential_token: token,
-      trust_anchor_entity_id: trustAnchor
-    };
-
-    const r = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const payload = { credential_token: token, trust_anchor_entity_id: anchorUrl };
+    const r = await fetch(walletEndpoint, { method:'POST', headers: walletHeaders(), body: JSON.stringify(payload) });
     if (!r.ok) throw new Error('HTTP ' + r.status + ' van wallet backend');
-
     const data = await r.json();
-    renderWalletResult(slug, data, payload);
-  } catch (e) {
-    result.className = 'wallet-result visible invalid';
-    result.innerHTML = `
-      <div class="wallet-title">Wallet backend kon niet verifieren</div>
-      <div class="policy-desc">Controleer of je backend draait op <code>${esc(endpoint)}</code> en CORS toestaat voor deze pagina.</div>
-      <pre class="wallet-raw">${esc(e.message)}</pre>
-    `;
+
+    const status = data.credential_verify_status || (data.valid ? 'VALID' : 'INVALID');
+    nodeWalletResults[slug] = { status: String(status), data, payload };
+    if (resultEl) {
+      resultEl.className = 'wallet-result visible ' + (status === 'VALID' ? 'valid' : 'invalid');
+      resultEl.innerHTML = renderWalletResultHtml(data, payload);
+    }
+    if (selectedSlug === slug) refreshPanel(slug);
+  } catch(e) {
+    if (resultEl) {
+      resultEl.className = 'wallet-result visible invalid';
+      resultEl.innerHTML = `<div class="wallet-title">Wallet backend fout</div><div class="policy-desc">Controleer of backend draait en CORS toestaat.<br><code>${esc(walletEndpoint)}</code></div><pre class="wallet-raw">${esc(e.message)}</pre>`;
+    }
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = 'Verify via wallet backend';
+    if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.textContent = '▶ Verify via wallet'; }
   }
 }
 
-function renderWalletResult(slug, data, payload) {
-  const result = document.getElementById('wallet-result-' + slug);
+function renderWalletResultHtml(data, payload) {
   const status = data.credential_verify_status || (data.valid ? 'VALID' : 'INVALID');
-  const valid = status === 'VALID' || status === true;
   const policies = data.credential_verify_policy_results || [];
   const policyHtml = policies.length
-    ? `<div class="policy-grid">${policies.map(p => `
-        <div class="policy-card ${p.valid ? 'ok' : 'fail'}">
-          <div class="policy-name">${p.valid ? 'OK' : 'FAIL'} ${esc(p.policyName || 'policy')}</div>
-          <div class="policy-desc">${esc(p.policyDescription || '')}</div>
-        </div>
-      `).join('')}</div>`
-    : '<div class="policy-desc">Geen policy-resultaten ontvangen.</div>';
-
-  result.className = 'wallet-result visible ' + (valid ? 'valid' : 'invalid');
-  result.innerHTML = `
-    <div class="wallet-title">Wallet backend: ${esc(String(status))}</div>
-    <div class="policy-desc" style="margin-bottom:8px">Input trust anchor: <code>${esc(payload.trust_anchor_entity_id)}</code></div>
-    ${policyHtml}
-    <details style="margin-top:8px">
-      <summary style="cursor:pointer;color:var(--text-mid);font-size:.7rem">Input naar wallet backend</summary>
-      <pre class="wallet-raw">${esc(JSON.stringify(payload, null, 2))}</pre>
-    </details>
-    <details style="margin-top:8px">
-      <summary style="cursor:pointer;color:var(--text-mid);font-size:.7rem">Raw response</summary>
-      <pre class="wallet-raw">${esc(JSON.stringify(data, null, 2))}</pre>
-    </details>
-  `;
-}
-
-function initWalletBackendUrl() {
-  const input = document.getElementById('walletBackendUrl');
-  if (!input) return;
-  const saved = localStorage.getItem(walletUrlStorageKey);
-  if (saved) input.value = saved;
-  input.addEventListener('change', () => {
-    localStorage.setItem(walletUrlStorageKey, input.value.trim());
-  });
+    ? policies.map(p => `<div class="policy-card ${p.valid?'ok':'fail'}"><div class="policy-name">${p.valid?'✓':'✗'} ${esc(p.policyName||'')}</div><div class="policy-desc">${esc(p.policyDescription||'')}</div></div>`).join('')
+    : '';
+  return `
+    <div class="wallet-title">Wallet: ${esc(String(status))}</div>
+    ${policyHtml ? `<div class="policy-grid">${policyHtml}</div>` : ''}
+    <details style="margin-top:6px"><summary style="cursor:pointer;color:var(--text-mid);font-size:.7rem">Input payload</summary><pre class="wallet-raw">${esc(JSON.stringify(payload,null,2))}</pre></details>
+    <details><summary style="cursor:pointer;color:var(--text-mid);font-size:.7rem">Raw response</summary><pre class="wallet-raw">${esc(JSON.stringify(data,null,2))}</pre></details>`;
 }
 
 function copyText(text, btn) {
   navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = '✓';
-    setTimeout(() => btn.textContent = orig, 1500);
+    const orig = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = orig, 1500);
   });
 }
 
@@ -1513,26 +1302,16 @@ function copyText(text, btn) {
 function showTip(e, slug) {
   const checks = nodeResults[slug + '__checks'];
   const scenResult = nodeScenario[slug];
-  let text = '';
-  if (scenResult?.error) text = scenResult.error.substring(0,120);
-  else if (checks?.length) text = checks.find(c => c.type === 'fail')?.text || checks[0]?.text || '';
+  let text = scenResult?.error?.substring(0,120) || checks?.find(c => c.type==='fail')?.text || '';
   if (!text) return;
   const tip = document.getElementById('tooltip');
-  tip.textContent = text;
-  tip.classList.add('visible');
-  moveTip(e);
+  tip.textContent = text; tip.classList.add('visible'); moveTip(e);
 }
 function hideTip() { document.getElementById('tooltip').classList.remove('visible'); }
-document.addEventListener('mousemove', e => {
-  if (document.getElementById('tooltip').classList.contains('visible')) moveTip(e);
-});
-function moveTip(e) {
-  const tip = document.getElementById('tooltip');
-  tip.style.left = (e.clientX + 14) + 'px';
-  tip.style.top  = (e.clientY + 14) + 'px';
-}
+function moveTip(e) { const t = document.getElementById('tooltip'); t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY+14)+'px'; }
+document.addEventListener('mousemove', e => { if (document.getElementById('tooltip').classList.contains('visible')) moveTip(e); });
 
-// ── SVG connectors ──
+// ── SVG connectors (horizontal: right-edge of parent → left-edge of child) ──
 function drawConnectors() {
   const svg    = document.getElementById('connSvg');
   const canvas = document.getElementById('diagramCanvas');
@@ -1543,14 +1322,15 @@ function drawConnectors() {
     const cEl = document.getElementById('node-' + childSlug);
     if (!pEl || !cEl) continue;
     const pr  = pEl.getBoundingClientRect();
-    const cr2 = cEl.getBoundingClientRect();
-    const x1 = pr.left  + pr.width/2  - cr.left;
-    const y1 = pr.bottom              - cr.top;
-    const x2 = cr2.left + cr2.width/2 - cr.left;
-    const y2 = cr2.top                - cr.top;
-    const midY = (y1 + y2) / 2;
+    const chr = cEl.getBoundingClientRect();
+    // right-center of parent → left-center of child
+    const x1 = pr.right  - cr.left;
+    const y1 = pr.top + pr.height/2 - cr.top;
+    const x2 = chr.left  - cr.left;
+    const y2 = chr.top + chr.height/2 - cr.top;
+    const midX = (x1 + x2) / 2;
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-    path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`);
+    path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`);
     path.dataset.edge = parentSlug + '→' + childSlug;
     svg.appendChild(path);
   }
@@ -1561,29 +1341,27 @@ function drawConnectors() {
 function updateEndpoints() {
   document.querySelectorAll('.node[data-slug]').forEach(el => {
     const slug = el.dataset.slug;
-    el.querySelectorAll('.node-ep').forEach((ep, i) => {
-      if (i === 0) ep.textContent = `${baseUrl}/${slug}/.well-known/openid-federation`;
-      if (i === 1) ep.textContent = `${baseUrl}/${slug}/fetch?sub=…`;
-    });
+    const ep = el.querySelector('.node-ep');
+    if (ep) ep.textContent = `${baseUrl}/${slug}/.well-known/openid-federation`;
   });
 }
 
 // ── Init ──
 window.addEventListener('load', () => {
-  initWalletBackendUrl();
-  fetch('/info').then(r => r.json()).then(d => {
-    baseUrl = d.endpoints?.anchor_config?.replace('/anchor/.well-known/openid-federation','') || window.location.origin;
-    document.getElementById('baseUrlDisplay').textContent = baseUrl;
-    updateEndpoints();
-    setTimeout(drawConnectors, 100);
-  }).catch(() => {
-    baseUrl = window.location.origin;
-    document.getElementById('baseUrlDisplay').textContent = baseUrl;
-    updateEndpoints();
-    setTimeout(drawConnectors, 100);
-  });
-});
+  const walletInput  = document.getElementById('walletBackendUrl');
+  const apiKeyInput  = document.getElementById('walletApiKey');
+  const savedUrl = localStorage.getItem('walletVerifyUrl');
+  const savedKey = localStorage.getItem('walletApiKey');
+  if (savedUrl) walletInput.value = savedUrl;
+  if (savedKey && apiKeyInput) apiKeyInput.value = savedKey;
+  walletInput.addEventListener('change', () => localStorage.setItem('walletVerifyUrl', walletInput.value.trim()));
+  apiKeyInput?.addEventListener('change', () => localStorage.setItem('walletApiKey', apiKeyInput.value.trim()));
 
+  baseUrl = DEFAULT_BASE_URL;
+  document.getElementById('baseUrlDisplay').textContent = baseUrl;
+  updateEndpoints();
+  setTimeout(drawConnectors, 150);
+});
 window.addEventListener('resize', drawConnectors);
 </script>
 </body>
