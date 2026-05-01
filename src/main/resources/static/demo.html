@@ -343,7 +343,7 @@ body {
 
 <div class="page-header">
   <h1>🔐 OpenID Federation — Testscenario's</h1>
-  <p class="sub">Live trust chain visualisatie · Railway endpoints</p>
+  <p class="sub">Live trust chain visualisatie · Render endpoints</p>
   <div class="base-url-pill" id="baseUrlDisplay">laden…</div>
 </div>
 
@@ -691,7 +691,7 @@ function renderSubStmt(step, subPayload, entityPayload, issuedBy) {
 async function loadChain(scenarioId) {
   const scenario = SCENARIOS.find(s => s.id === scenarioId);
   const container = document.getElementById('chain-' + scenarioId);
-  container.innerHTML = `<div class="chain-placeholder"><span class="spinner"></span>Chain ophalen van Railway…</div>`;
+  container.innerHTML = `<div class="chain-placeholder"><span class="spinner"></span>Chain ophalen van Render…</div>`;
 
   // Collect all unique slugs to fetch
   const slugs = new Set();
