@@ -1,3 +1,5 @@
+com\example\federationdemo\controller\TestScenarioController$RunAllResult.class
+com\example\federationdemo\controller\TestScenarioController$TestScenario.class
 com\example\federationdemo\validation\PolicyEvaluator.class
 com\example\federationdemo\config\FederationConfig.class
 com\example\federationdemo\controller\FederationController.class
@@ -11,14 +13,17 @@ com\example\federationdemo\validation\MetadataPolicyMerger.class
 com\example\federationdemo\config\FederationProperties.class
 com\example\federationdemo\controller\VerifyController.class
 com\example\federationdemo\service\StatementBuilder.class
+com\example\federationdemo\controller\TestScenarioController.class
 com\example\federationdemo\controller\VerifyController$VerifyRequest.class
 com\example\federationdemo\validation\CredentialKidHolder.class
 com\example\federationdemo\validation\ConstraintsValidator.class
 com\example\federationdemo\validation\TrustChainResolver.class
 com\example\federationdemo\controller\IssueController.class
+com\example\federationdemo\controller\TestScenarioController$ChainTrace.class
 com\example\federationdemo\validation\EntityStatementValidator.class
 com\example\federationdemo\validation\TrustChain.class
 com\example\federationdemo\FederationDemoApplication.class
+com\example\federationdemo\controller\TestScenarioController$ScenarioRunResult.class
 com\example\federationdemo\demo\DemoEventType.class
 com\example\federationdemo\controller\IssueController$IssueResponse.class
 com\example\federationdemo\demo\DemoEvent.class
@@ -27,3 +32,5 @@ com\example\federationdemo\validation\CredentialTrustChainHolder.class
 com\example\federationdemo\controller\InfoController.class
 com\example\federationdemo\demo\DemoStreamController.class
 com\example\federationdemo\validation\ParsedJwt.class
+com\example\federationdemo\controller\AdminController.class
+com\example\federationdemo\controller\TestScenarioController$TestScenarioView.class
