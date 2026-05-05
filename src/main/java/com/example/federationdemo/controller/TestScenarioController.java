@@ -274,7 +274,7 @@ public class TestScenarioController {
             case "leaf-policy-type-ok" -> "metadata_policy subset_of bevat DiplomaCertificate; verifier mag accepteren.";
             case "leaf-policy-jwks-ok" -> "metadata_policy value zet vc_issuer.jwks op dezelfde geldige key.";
             case "leaf-policy-crit-ok" -> "metadata_policy_crit bevat bekende operator subset_of.";
-            case "leaf-all-in" -> "Diepe keten met metadata_policy: credential_types_supported subset_of, grant_types_supported default, token_endpoint_auth_method one_of, display default en credential_issuer value.";
+            case "leaf-all-in" -> "Diepe keten met metadata_policy plus credential checks: exp geldig, nbf geldig, credentialStatus niet revoked, trusted issuer/type en geldige signature.";
             case "leaf-policy-value-conflict" -> "Twee subordinate statements gebruiken value op openid_credential_issuer.token_endpoint_auth_method met verschillende waarden; volgens 6.1.3.1.1 moet dit een policy error zijn.";
             case "leaf-trustmark-delegated" -> "De intermediate draagt de Trust Mark; de mark bevat iss, sub, trust_mark_type en iat, met delegation JWT en trust_mark_owners in de trust anchor.";
             default -> null;
@@ -387,7 +387,7 @@ public class TestScenarioController {
                         "Geen van de 10 authority hints leidt naar de trust anchor."),
                 new TestScenario(24, "Alles-in-een - diepe chain, hints en policies", "depth", true,
                         "leaf-all-in", "/anchor", "DiplomaCertificate",
-                        "Leaf via 10 intermediates met meerdere authority hints per hop en meerdere metadata policies."),
+                        "Leaf via 10 intermediates met policies; credential bevat exp, nbf, credentialStatus, trusted issuer/type en geldige signature."),
                 new TestScenario(25, "Metadata policy - value operator merge conflict", "policy", false,
                         "leaf-policy-value-conflict", "/anchor", "DiplomaCertificate",
                         "Test OpenID Federation 6.1.3.1.1: value operator merge mag alleen als waarden gelijk zijn."),

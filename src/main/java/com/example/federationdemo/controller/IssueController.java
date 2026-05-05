@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -66,22 +67,36 @@ public class IssueController {
             }
 
             long now = Instant.now().getEpochSecond();
-            JWTClaimsSet claims = new JWTClaimsSet.Builder()
+            String credentialType = request.credentialType() != null
+                    ? request.credentialType()
+                    : "DiplomaCertificate";
+            String subject = request.subject() != null ? request.subject() : "did:example:test";
+
+            Map<String, Object> vc = new LinkedHashMap<>();
+            vc.put("type", new String[]{"VerifiableCredential", credentialType});
+            vc.put("credentialSubject", Map.of(
+                    "id", subject,
+                    "achievement", request.achievement() != null
+                            ? request.achievement()
+                            : "Bachelor of Science"));
+            if ("leaf-all-in".equals(issuerName)) {
+                vc.put("credentialStatus", Map.of(
+                        "id", baseUrl + "/credential-status/leaf-all-in-valid",
+                        "type", "DemoCredentialStatus",
+                        "statusPurpose", "revocation",
+                        "revoked", false));
+            }
+
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                     .issuer(issuerUrl)
-                    .subject(request.subject() != null ? request.subject() : "did:example:test")
+                    .subject(subject)
                     .issueTime(Date.from(Instant.ofEpochSecond(now)))
                     .expirationTime(Date.from(Instant.ofEpochSecond(now + 3600)))
-                    .claim("vc", Map.of(
-                            "type", new String[]{"VerifiableCredential",
-                                    request.credentialType() != null
-                                            ? request.credentialType()
-                                            : "DiplomaCertificate"},
-                            "credentialSubject", Map.of(
-                                    "id", request.subject() != null ? request.subject() : "did:example:test",
-                                    "achievement", request.achievement() != null
-                                            ? request.achievement()
-                                            : "Bachelor of Science")))
-                    .build();
+                    .claim("vc", vc);
+            if ("leaf-all-in".equals(issuerName)) {
+                claimsBuilder.notBeforeTime(Date.from(Instant.ofEpochSecond(now - 60)));
+            }
+            JWTClaimsSet claims = claimsBuilder.build();
 
             JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256)
                     .type(new JOSEObjectType("JWT"))
