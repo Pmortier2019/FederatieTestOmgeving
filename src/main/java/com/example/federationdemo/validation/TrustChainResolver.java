@@ -75,13 +75,47 @@ public class TrustChainResolver {
 
         // Step 14: Trust mark validation
         if (requiredTrustMarkId != null) {
-            ParsedJwt leaf = jwtParser.parse(chain.statements().get(0));
-            ParsedJwt anchor = jwtParser.parse(chain.statements().get(chain.statements().size() - 1));
-            PublicKey anchorKey = extractKeyFromList(federationProperties.getTrustAnchorJwks(), anchor.rawJwt());
-            trustMarkValidator.validateEntityHasTrustMark(leaf, requiredTrustMarkId, anchor, anchorKey);
+            validateRequiredTrustMarkInChain(chain, requiredTrustMarkId);
         }
 
         return chain;
+    }
+
+    private void validateRequiredTrustMarkInChain(TrustChain chain, String requiredTrustMarkId) {
+        ParsedJwt anchor = jwtParser.parse(chain.statements().get(chain.statements().size() - 1));
+        PublicKey anchorKey = extractKeyFromList(federationProperties.getTrustAnchorJwks(), anchor.rawJwt());
+
+        Set<String> candidateEntityIds = new LinkedHashSet<>();
+        ParsedJwt leaf = jwtParser.parse(chain.statements().get(0));
+        candidateEntityIds.add(leaf.sub());
+
+        for (int i = 1; i < chain.statements().size() - 1; i++) {
+            ParsedJwt statement = jwtParser.parse(chain.statements().get(i));
+            if (!Objects.equals(statement.iss(), anchor.sub())) {
+                candidateEntityIds.add(statement.iss());
+            }
+        }
+
+        List<String> failures = new ArrayList<>();
+        for (String entityId : candidateEntityIds) {
+            try {
+                ParsedJwt entityConfig = Objects.equals(entityId, leaf.sub())
+                        ? leaf
+                        : jwtParser.parse(fetchEntityConfig(entityId));
+                validateSelfIssuedConfig(entityConfig, entityId);
+                PublicKey entityKey = extractPublicKey(entityConfig.jwks(), entityConfig.rawJwt());
+                statementValidator.validate(entityConfig, entityKey);
+                trustMarkValidator.validateEntityHasTrustMark(
+                        entityConfig, requiredTrustMarkId, anchor, anchorKey);
+                return;
+            } catch (Exception ex) {
+                failures.add(entityId + ": " + ex.getMessage());
+            }
+        }
+
+        throw new IllegalArgumentException(
+                "Required trust mark '" + requiredTrustMarkId +
+                        "' not found on any trust chain entity. Failures: " + failures);
     }
 
     private TrustChain resolveFromConfig(ParsedJwt currentConfig,
