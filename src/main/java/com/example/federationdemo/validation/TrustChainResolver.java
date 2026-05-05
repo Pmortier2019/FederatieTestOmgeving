@@ -14,7 +14,7 @@ import java.util.*;
 @Component
 public class TrustChainResolver {
 
-    private static final int MAX_HOPS = 5;
+    private static final int MAX_HOPS = 11;
 
     private final RestTemplate restTemplate;
     private final EntityStatementValidator statementValidator;

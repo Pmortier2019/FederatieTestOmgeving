@@ -117,8 +117,14 @@ public class IssueController {
             case "leaf-policy-type-ok" -> entityStore.getEcKey("leaf");
             case "leaf-policy-jwks-ok" -> entityStore.getEcKey("leaf");
             case "leaf-policy-crit-ok" -> entityStore.getEcKey("leaf");
-            case "leaf-deep"       -> entityStore.getEcKey("leaf");
+            case "leaf-deep"       -> entityStore.getEcKey("leaf-deep");
             case "leaf-maxpath"    -> entityStore.getEcKey("leaf");
+            case "leaf-chain3"     -> entityStore.getEcKey("leaf-chain3");
+            case "leaf-chain5"     -> entityStore.getEcKey("leaf-chain5");
+            case "leaf-chain10"    -> entityStore.getEcKey("leaf-chain10");
+            case "leaf-5hints"     -> entityStore.getEcKey("leaf-5hints");
+            case "leaf-10hints"    -> entityStore.getEcKey("leaf-10hints");
+            case "leaf-10hints-fail" -> entityStore.getEcKey("leaf-10hints-fail");
             default               -> null;
         };
     }
