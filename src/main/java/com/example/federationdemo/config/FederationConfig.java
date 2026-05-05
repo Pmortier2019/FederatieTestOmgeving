@@ -69,7 +69,7 @@ public class FederationConfig {
 
         EntityStore store = new EntityStore();
         long now = Instant.now().getEpochSecond();
-        long exp = now + 86400;
+        long exp = now + 365L * 24 * 60 * 60;
 
         // Sleutels opslaan
         Map<String, Object> anchorJwks        = buildJwks(anchorKey);

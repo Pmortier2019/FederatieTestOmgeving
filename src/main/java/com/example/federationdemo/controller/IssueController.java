@@ -91,7 +91,7 @@ public class IssueController {
                     .issuer(issuerUrl)
                     .subject(subject)
                     .issueTime(Date.from(Instant.ofEpochSecond(now)))
-                    .expirationTime(Date.from(Instant.ofEpochSecond(now + 3600)))
+                    .expirationTime(Date.from(Instant.ofEpochSecond(now + 365L * 24 * 60 * 60)))
                     .claim("vc", vc);
             if ("leaf-all-in".equals(issuerName)) {
                 claimsBuilder.notBeforeTime(Date.from(Instant.ofEpochSecond(now - 60)));
