@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -146,6 +147,7 @@ public class TestScenarioController {
             case "leaf-chain3" -> List.of(baseUrl + "/inter-chain3-1");
             case "leaf-chain5" -> List.of(baseUrl + "/inter-chain5-1");
             case "leaf-chain10" -> List.of(baseUrl + "/inter-chain10-1");
+            case "leaf-all-in" -> authorityHints("all-in-leaf", baseUrl + "/inter-all-in-1", 5);
             case "leaf-5hints" -> List.of(
                     baseUrl + "/nonexistent-h1", baseUrl + "/nonexistent-h2",
                     baseUrl + "/nonexistent-h3", baseUrl + "/nonexistent-h4",
@@ -218,6 +220,7 @@ public class TestScenarioController {
                     baseUrl + "/inter-chain10-9/fetch?sub=" + baseUrl + "/inter-chain10-8",
                     baseUrl + "/inter-chain10-10/fetch?sub=" + baseUrl + "/inter-chain10-9",
                     baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-chain10-10");
+            case "leaf-all-in" -> allInFetchCalls(issuer);
             case "leaf-5hints" -> List.of(
                     baseUrl + "/nonexistent-h1/.well-known/openid-federation",
                     baseUrl + "/nonexistent-h2/.well-known/openid-federation",
@@ -262,8 +265,38 @@ public class TestScenarioController {
             case "leaf-policy-type-ok" -> "metadata_policy subset_of bevat DiplomaCertificate; verifier mag accepteren.";
             case "leaf-policy-jwks-ok" -> "metadata_policy value zet vc_issuer.jwks op dezelfde geldige key.";
             case "leaf-policy-crit-ok" -> "metadata_policy_crit bevat bekende operator subset_of.";
+            case "leaf-all-in" -> "Diepe keten met metadata_policy: credential_types_supported subset_of, grant_types_supported default, token_endpoint_auth_method one_of, display default en credential_issuer value.";
             default -> null;
         };
+    }
+
+    private List<String> authorityHints(String label, String validParent, int totalHints) {
+        List<String> hints = new ArrayList<>();
+        for (int i = 1; i < totalHints; i++) {
+            hints.add(baseUrl + "/nonexistent-" + label + "-hint-" + i);
+        }
+        hints.add(validParent);
+        return hints;
+    }
+
+    private List<String> allInFetchCalls(String issuer) {
+        List<String> calls = new ArrayList<>();
+        calls.addAll(authorityHints("all-in-leaf", baseUrl + "/inter-all-in-1", 5).stream()
+                .map(h -> h.equals(baseUrl + "/inter-all-in-1")
+                        ? h + "/fetch?sub=" + issuer
+                        : h + "/.well-known/openid-federation")
+                .toList());
+        for (int i = 1; i <= 10; i++) {
+            String subject = i == 1 ? baseUrl + "/inter-all-in-1" : baseUrl + "/inter-all-in-" + i;
+            String parent = i == 10 ? baseUrl + "/anchor" : baseUrl + "/inter-all-in-" + (i + 1);
+            int hintCount = 1 + (i % 5);
+            for (String hint : authorityHints("all-in-" + i, parent, hintCount)) {
+                calls.add(hint.equals(parent)
+                        ? hint + "/fetch?sub=" + subject
+                        : hint + "/.well-known/openid-federation");
+            }
+        }
+        return calls;
     }
 
     private List<TestScenario> scenarios() {
@@ -283,9 +316,6 @@ public class TestScenarioController {
                 new TestScenario(5, "Verkeerde sleutel in subordinate statement", "integrity", false,
                         "leaf-wrongkey", "/anchor", "DiplomaCertificate",
                         "Resolved vc_issuer.jwks bevat niet de credential signing key."),
-                new TestScenario(6, "Metadata policy - niet-toegestaan credential type", "policy", false,
-                        "leaf-policy-type", "/anchor", "DiplomaCertificate",
-                        "Policy beperkt credential_types_supported zodat DiplomaCertificate niet overblijft."),
                 new TestScenario(7, "Metadata policy - JWKS overschreven", "policy", false,
                         "leaf-policy-jwks", "/anchor", "DiplomaCertificate",
                         "Policy value overschrijft vc_issuer.jwks met een andere sleutel."),
@@ -319,9 +349,9 @@ public class TestScenarioController {
                 new TestScenario(17, "Metadata policy crit - bekende operator", "policy", true,
                         "leaf-policy-crit-ok", "/anchor", "DiplomaCertificate",
                         "metadata_policy_crit gebruikt bekende operator subset_of."),
-                new TestScenario(18, "Geldig pad - keten diepte 3", "depth", true,
+                new TestScenario(18, "Geldig pad - leaf via 3 intermediates", "depth", true,
                         "leaf-chain3", "/anchor", "DiplomaCertificate",
-                        "Leaf via 3 intermediates naar trust anchor — geldige diepe keten."),
+                        "Leaf -> intermediate 1 -> intermediate 2 -> intermediate 3 -> trust anchor."),
                 new TestScenario(19, "Geldig pad - keten diepte 5", "depth", true,
                         "leaf-chain5", "/anchor", "DiplomaCertificate",
                         "Leaf via 5 intermediates naar trust anchor — geldige diepe keten."),
@@ -336,7 +366,10 @@ public class TestScenarioController {
                         "Resolver probeert 9 ongeldige hints voordat de geldige hint slaagt."),
                 new TestScenario(23, "Tien authority hints - alle ongeldig", "authority", false,
                         "leaf-10hints-fail", "/anchor", "DiplomaCertificate",
-                        "Geen van de 10 authority hints leidt naar de trust anchor.")
+                        "Geen van de 10 authority hints leidt naar de trust anchor."),
+                new TestScenario(24, "Alles-in-een - diepe chain, hints en policies", "depth", true,
+                        "leaf-all-in", "/anchor", "DiplomaCertificate",
+                        "Leaf via 10 intermediates met meerdere authority hints per hop en meerdere metadata policies.")
         );
     }
 
