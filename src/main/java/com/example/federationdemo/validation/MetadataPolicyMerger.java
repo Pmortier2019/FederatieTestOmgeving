@@ -104,7 +104,14 @@ public class MetadataPolicyMerger {
 
                 Map<String, Object> p2Ops = (Map<String, Object>) mergedEntityPolicy.get(field);
                 Map<String, Object> mergedOps = new LinkedHashMap<>(p2Ops);
-                // policy1 wins on value and one_of
+                if (p1Ops.containsKey("value") && p2Ops.containsKey("value")
+                        && !Objects.equals(p1Ops.get("value"), p2Ops.get("value"))) {
+                    throw new IllegalArgumentException(
+                            "value operator merge conflict for " + entityType + "." + field +
+                                    ": " + p1Ops.get("value") + " != " + p2Ops.get("value"));
+                }
+
+                // policy1 wins on operators where a stricter superior policy overrides a subordinate policy.
                 for (String op : List.of("value", "one_of")) {
                     if (p1Ops.containsKey(op)) {
                         mergedOps.put(op, p1Ops.get(op));

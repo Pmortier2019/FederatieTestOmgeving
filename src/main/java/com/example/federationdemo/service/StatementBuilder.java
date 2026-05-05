@@ -17,6 +17,18 @@ import java.util.Map;
 public class StatementBuilder {
 
     public String sign(Map<String, Object> claims, ECKey signerKey) {
+        return sign(claims, signerKey, "entity-statement+jwt");
+    }
+
+    public String signTrustMark(Map<String, Object> claims, ECKey signerKey) {
+        return sign(claims, signerKey, "trust-mark+jwt");
+    }
+
+    public String signTrustMarkDelegation(Map<String, Object> claims, ECKey signerKey) {
+        return sign(claims, signerKey, "trust-mark-delegation+jwt");
+    }
+
+    private String sign(Map<String, Object> claims, ECKey signerKey, String typ) {
         try {
             long now = Instant.now().getEpochSecond();
 
@@ -35,7 +47,7 @@ public class StatementBuilder {
             }
 
             JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.ES256)
-                    .type(new JOSEObjectType("entity-statement+jwt"))
+                    .type(new JOSEObjectType(typ))
                     .keyID(signerKey.getKeyID())
                     .build();
 

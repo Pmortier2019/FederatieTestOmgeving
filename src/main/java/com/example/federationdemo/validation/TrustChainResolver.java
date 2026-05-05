@@ -78,7 +78,7 @@ public class TrustChainResolver {
             ParsedJwt leaf = jwtParser.parse(chain.statements().get(0));
             ParsedJwt anchor = jwtParser.parse(chain.statements().get(chain.statements().size() - 1));
             PublicKey anchorKey = extractKeyFromList(federationProperties.getTrustAnchorJwks(), anchor.rawJwt());
-            trustMarkValidator.validateEntityHasTrustMark(leaf, requiredTrustMarkId, anchorKey);
+            trustMarkValidator.validateEntityHasTrustMark(leaf, requiredTrustMarkId, anchor, anchorKey);
         }
 
         return chain;

@@ -519,6 +519,30 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
               </div>
             </div>
 
+            <div class="node role-leaf" id="node-leaf-policy-value-conflict"
+                 data-slug="leaf-policy-value-conflict" data-name="Policy: value conflict" data-role="OP / Leaf" data-valid="false" data-scenario="25"
+                 onclick="selectNode('leaf-policy-value-conflict')" onmouseenter="showTip(event,'leaf-policy-value-conflict')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Policy: value conflict</div>
+              <div class="node-ep" id="ep-leaf-policy-value-conflict">/leaf-policy-value-conflict/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S25</span>
+                <span class="node-tag valid-false">verwacht: ongeldig</span>
+              </div>
+            </div>
+
+            <div class="node role-leaf" id="node-leaf-trustmark-delegated"
+                 data-slug="leaf-trustmark-delegated" data-name="Trust Mark delegatie" data-role="OP / Leaf" data-valid="true" data-scenario="26"
+                 onclick="selectNode('leaf-trustmark-delegated')" onmouseenter="showTip(event,'leaf-trustmark-delegated')" onmouseleave="hideTip()">
+              <div class="node-dot">—</div>
+              <div class="node-name">Trust Mark delegatie</div>
+              <div class="node-ep" id="ep-leaf-trustmark-delegated">/leaf-trustmark-delegated/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S26</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+
             <div class="node role-leaf" id="node-leaf-policy-type-ok"
                  data-slug="leaf-policy-type-ok" data-name="Policy: Type toegestaan" data-role="OP / Leaf" data-valid="true" data-scenario="15"
                  onclick="selectNode('leaf-policy-type-ok')" onmouseenter="showTip(event,'leaf-policy-type-ok')" onmouseleave="hideTip()">
@@ -772,6 +796,8 @@ const ANCHOR_FOR = {
   'leaf-subwrong':       '/anchor',
   'leaf-multihint':      '/anchor',
   'leaf-policy-jwks':    '/anchor',
+  'leaf-policy-value-conflict': '/anchor',
+  'leaf-trustmark-delegated': '/anchor',
   'leaf-policy-type-ok': '/anchor',
   'leaf-policy-jwks-ok': '/anchor',
   'leaf-policy-crit-ok': '/anchor',
@@ -796,6 +822,8 @@ const SCENARIO_ID = {
   'leaf-expired':        4,
   'leaf-wrongkey':       5,
   'leaf-policy-jwks':    7,
+  'leaf-policy-value-conflict': 25,
+  'leaf-trustmark-delegated': 26,
   'leaf-multihint':      9,
   'leaf-nohint':         10,
   'leaf-wronganchor':    11,
@@ -827,6 +855,8 @@ const PARENTS = {
   'leaf-nohint':         null,
   'rogue':               null,
   'leaf-policy-jwks':    'intermediate',
+  'leaf-policy-value-conflict': 'inter-value-conflict',
+  'leaf-trustmark-delegated': 'intermediate',
   'leaf-deep':           'inter-depth-1',
   'leaf-maxpath':        'intermediate-maxpath',
   'leaf-wronganchor':    'intermediate',
@@ -865,6 +895,8 @@ const EDGES = [
   ['intermediate','leaf-multihint'],
   ['intermediate','leaf-nohint'],
   ['intermediate','leaf-policy-jwks'],
+  ['inter-value-conflict','leaf-policy-value-conflict'],
+  ['intermediate','leaf-trustmark-delegated'],
   ['intermediate','leaf-policy-type-ok'],
   ['intermediate','leaf-policy-jwks-ok'],
   ['intermediate','leaf-policy-crit-ok'],
