@@ -276,7 +276,7 @@ public class TestScenarioController {
             case "leaf-policy-crit-ok" -> "metadata_policy_crit bevat bekende operator subset_of.";
             case "leaf-all-in" -> "Diepe keten met metadata_policy: credential_types_supported subset_of, grant_types_supported default, token_endpoint_auth_method one_of, display default en credential_issuer value.";
             case "leaf-policy-value-conflict" -> "Twee subordinate statements gebruiken value op openid_credential_issuer.token_endpoint_auth_method met verschillende waarden; volgens 6.1.3.1.1 moet dit een policy error zijn.";
-            case "leaf-trustmark-delegated" -> "Trust Mark bevat iss, sub, trust_mark_type en iat; issuer is gedelegeerd via delegation JWT en trust_mark_owners in de trust anchor.";
+            case "leaf-trustmark-delegated" -> "De intermediate draagt de Trust Mark; de mark bevat iss, sub, trust_mark_type en iat, met delegation JWT en trust_mark_owners in de trust anchor.";
             default -> null;
         };
     }
@@ -391,9 +391,9 @@ public class TestScenarioController {
                 new TestScenario(25, "Metadata policy - value operator merge conflict", "policy", false,
                         "leaf-policy-value-conflict", "/anchor", "DiplomaCertificate",
                         "Test OpenID Federation 6.1.3.1.1: value operator merge mag alleen als waarden gelijk zijn."),
-                new TestScenario(26, "Trust Mark - delegated issuer met trust_mark_owners", "trustmark", true,
+                new TestScenario(26, "Trust Mark - op intermediate met delegation", "trustmark", true,
                         "leaf-trustmark-delegated", "/anchor", "DiplomaCertificate",
-                        "Trust Mark is uitgegeven door een gedelegeerde issuer met delegation JWT en owner in de trust anchor.")
+                        "Trust Mark staat op de intermediate en is uitgegeven met delegation JWT en owner in de trust anchor.")
         );
     }
 

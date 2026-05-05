@@ -128,12 +128,33 @@ public class FederationConfig {
                 anchorKey));
 
         // ── Intermediate ──────────────────────────────────────────────────────
+        String trustMarkDelegation = builder.signTrustMarkDelegation(linkedMap(
+                "iss", baseUrl + "/anchor",
+                "sub", baseUrl + "/intermediate",
+                "iat", now, "exp", exp,
+                "trust_mark_type", delegatedTrustMarkType,
+                "jwks", intermediateJwks),
+                anchorKey);
+
+        String delegatedTrustMark = builder.signTrustMark(linkedMap(
+                "iss", baseUrl + "/intermediate",
+                "sub", baseUrl + "/intermediate",
+                "iat", now, "exp", exp,
+                "trust_mark_type", delegatedTrustMarkType,
+                "logo_uri", baseUrl + "/static/trust-mark.png",
+                "ref", baseUrl + "/trust-marks/accredited-issuer/ref",
+                "delegation", trustMarkDelegation),
+                intermediateKey);
+
         store.putEntityConfig("intermediate", builder.sign(linkedMap(
                 "iss", baseUrl + "/intermediate",
                 "sub", baseUrl + "/intermediate",
                 "iat", now, "exp", exp,
                 "jwks", intermediateJwks,
                 "authority_hints", List.of(baseUrl + "/anchor"),
+                "trust_marks", List.of(Map.of(
+                        "id", delegatedTrustMarkType,
+                        "trust_mark", delegatedTrustMark)),
                 "metadata", Map.of("federation_entity", Map.of(
                         "federation_fetch_endpoint", baseUrl + "/intermediate/fetch",
                         "display_name", "Surf (demo)"))),
@@ -164,25 +185,7 @@ public class FederationConfig {
                         "metadata", Map.of("federation_entity", Map.of())),
                         anchorKey));
 
-        // Scenario 26: Trust Mark met delegation en trust_mark_owners
-        String trustMarkDelegation = builder.signTrustMarkDelegation(linkedMap(
-                "iss", baseUrl + "/anchor",
-                "sub", baseUrl + "/intermediate",
-                "iat", now, "exp", exp,
-                "trust_mark_type", delegatedTrustMarkType,
-                "jwks", intermediateJwks),
-                anchorKey);
-
-        String delegatedTrustMark = builder.signTrustMark(linkedMap(
-                "iss", baseUrl + "/intermediate",
-                "sub", baseUrl + "/leaf-trustmark-delegated",
-                "iat", now, "exp", exp,
-                "trust_mark_type", delegatedTrustMarkType,
-                "logo_uri", baseUrl + "/static/trust-mark.png",
-                "ref", baseUrl + "/trust-marks/accredited-issuer/ref",
-                "delegation", trustMarkDelegation),
-                intermediateKey);
-
+        // Scenario 26: Trust Mark op intermediate met delegation en trust_mark_owners
         store.putEcKey("leaf-trustmark-delegated", leafKey);
         store.putJwks("leaf-trustmark-delegated", leafJwks);
         store.putEntityConfig("leaf-trustmark-delegated", builder.sign(linkedMap(
@@ -191,9 +194,6 @@ public class FederationConfig {
                 "iat", now, "exp", exp,
                 "jwks", leafJwks,
                 "authority_hints", List.of(baseUrl + "/intermediate"),
-                "trust_marks", List.of(Map.of(
-                        "id", delegatedTrustMarkType,
-                        "trust_mark", delegatedTrustMark)),
                 "metadata", Map.of(
                         "federation_entity", Map.of("display_name", "Delegated Trust Mark Leaf"),
                         "openid_credential_issuer", Map.of(
