@@ -41,7 +41,7 @@ public class VerifyController {
             TrustChain chain = resolver.resolve(
                     issuerIdentifier,
                     request.trustAnchorEntityId(),
-                    null);
+                    request.requiredTrustMarkId());
             if (credential != null) {
                 verifyCredentialAgainstResolvedMetadata(credential, chain);
             }
@@ -113,7 +113,8 @@ public class VerifyController {
         return List.of();
     }
 
-    public record VerifyRequest(String issuerIdentifier, String trustAnchorEntityId, String credentialJwt) {}
+    public record VerifyRequest(String issuerIdentifier, String trustAnchorEntityId, String credentialJwt,
+                                String requiredTrustMarkId) {}
 
     public record VerifyResponse(boolean trusted, String issuer, String error) {}
 }

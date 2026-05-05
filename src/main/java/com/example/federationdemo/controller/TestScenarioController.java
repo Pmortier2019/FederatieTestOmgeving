@@ -57,7 +57,8 @@ public class TestScenarioController {
             VerifyController.VerifyResponse verify = verifyController.verify(new VerifyController.VerifyRequest(
                     baseUrl + "/" + scenario.issuer(),
                     trustAnchor,
-                    credentialJwt));
+                    credentialJwt,
+                    requiredTrustMarkFor(scenario)));
 
             boolean actualTrusted = verify.trusted();
             boolean passed = actualTrusted == scenario.expectedTrusted();
@@ -148,6 +149,8 @@ public class TestScenarioController {
             case "leaf-chain5" -> List.of(baseUrl + "/inter-chain5-1");
             case "leaf-chain10" -> List.of(baseUrl + "/inter-chain10-1");
             case "leaf-all-in" -> authorityHints("all-in-leaf", baseUrl + "/inter-all-in-1", 5);
+            case "leaf-policy-value-conflict" -> List.of(baseUrl + "/inter-value-conflict");
+            case "leaf-trustmark-delegated" -> List.of(baseUrl + "/intermediate");
             case "leaf-5hints" -> List.of(
                     baseUrl + "/nonexistent-h1", baseUrl + "/nonexistent-h2",
                     baseUrl + "/nonexistent-h3", baseUrl + "/nonexistent-h4",
@@ -221,6 +224,12 @@ public class TestScenarioController {
                     baseUrl + "/inter-chain10-10/fetch?sub=" + baseUrl + "/inter-chain10-9",
                     baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-chain10-10");
             case "leaf-all-in" -> allInFetchCalls(issuer);
+            case "leaf-policy-value-conflict" -> List.of(
+                    baseUrl + "/inter-value-conflict/fetch?sub=" + issuer,
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-value-conflict");
+            case "leaf-trustmark-delegated" -> List.of(
+                    baseUrl + "/intermediate/fetch?sub=" + issuer,
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/intermediate");
             case "leaf-5hints" -> List.of(
                     baseUrl + "/nonexistent-h1/.well-known/openid-federation",
                     baseUrl + "/nonexistent-h2/.well-known/openid-federation",
@@ -266,6 +275,15 @@ public class TestScenarioController {
             case "leaf-policy-jwks-ok" -> "metadata_policy value zet vc_issuer.jwks op dezelfde geldige key.";
             case "leaf-policy-crit-ok" -> "metadata_policy_crit bevat bekende operator subset_of.";
             case "leaf-all-in" -> "Diepe keten met metadata_policy: credential_types_supported subset_of, grant_types_supported default, token_endpoint_auth_method one_of, display default en credential_issuer value.";
+            case "leaf-policy-value-conflict" -> "Twee subordinate statements gebruiken value op openid_credential_issuer.token_endpoint_auth_method met verschillende waarden; volgens 6.1.3.1.1 moet dit een policy error zijn.";
+            case "leaf-trustmark-delegated" -> "Trust Mark bevat iss, sub, trust_mark_type en iat; issuer is gedelegeerd via delegation JWT en trust_mark_owners in de trust anchor.";
+            default -> null;
+        };
+    }
+
+    private String requiredTrustMarkFor(TestScenario scenario) {
+        return switch (scenario.issuer()) {
+            case "leaf-trustmark-delegated" -> baseUrl + "/trust-marks/accredited-issuer";
             default -> null;
         };
     }
@@ -369,7 +387,13 @@ public class TestScenarioController {
                         "Geen van de 10 authority hints leidt naar de trust anchor."),
                 new TestScenario(24, "Alles-in-een - diepe chain, hints en policies", "depth", true,
                         "leaf-all-in", "/anchor", "DiplomaCertificate",
-                        "Leaf via 10 intermediates met meerdere authority hints per hop en meerdere metadata policies.")
+                        "Leaf via 10 intermediates met meerdere authority hints per hop en meerdere metadata policies."),
+                new TestScenario(25, "Metadata policy - value operator merge conflict", "policy", false,
+                        "leaf-policy-value-conflict", "/anchor", "DiplomaCertificate",
+                        "Test OpenID Federation 6.1.3.1.1: value operator merge mag alleen als waarden gelijk zijn."),
+                new TestScenario(26, "Trust Mark - delegated issuer met trust_mark_owners", "trustmark", true,
+                        "leaf-trustmark-delegated", "/anchor", "DiplomaCertificate",
+                        "Trust Mark is uitgegeven door een gedelegeerde issuer met delegation JWT en owner in de trust anchor.")
         );
     }
 

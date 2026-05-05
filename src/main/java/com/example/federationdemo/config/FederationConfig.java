@@ -111,14 +111,20 @@ public class FederationConfig {
         store.putJwks("leaf-subwrong",   leafSubwrongJwks);
 
         // ── Anchor ────────────────────────────────────────────────────────────
-        store.putEntityConfig("anchor", builder.sign(Map.of(
+        String delegatedTrustMarkType = baseUrl + "/trust-marks/accredited-issuer";
+
+        store.putEntityConfig("anchor", builder.sign(linkedMap(
                 "iss", baseUrl + "/anchor",
                 "sub", baseUrl + "/anchor",
                 "iat", now, "exp", exp,
                 "jwks", anchorJwks,
                 "metadata", Map.of("federation_entity", Map.of(
                         "federation_fetch_endpoint", baseUrl + "/anchor/fetch",
-                        "display_name", "Nederlandse Overheid (demo)"))),
+                        "display_name", "Nederlandse Overheid (demo)")),
+                "trust_mark_owners", Map.of(
+                        delegatedTrustMarkType, Map.of(
+                                "sub", baseUrl + "/anchor",
+                                "jwks", anchorJwks))),
                 anchorKey));
 
         // ── Intermediate ──────────────────────────────────────────────────────
@@ -156,6 +162,115 @@ public class FederationConfig {
                         "iat", now, "exp", exp,
                         "jwks", intermediateJwks,
                         "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        // Scenario 26: Trust Mark met delegation en trust_mark_owners
+        String trustMarkDelegation = builder.signTrustMarkDelegation(linkedMap(
+                "iss", baseUrl + "/anchor",
+                "sub", baseUrl + "/intermediate",
+                "iat", now, "exp", exp,
+                "trust_mark_type", delegatedTrustMarkType,
+                "jwks", intermediateJwks),
+                anchorKey);
+
+        String delegatedTrustMark = builder.signTrustMark(linkedMap(
+                "iss", baseUrl + "/intermediate",
+                "sub", baseUrl + "/leaf-trustmark-delegated",
+                "iat", now, "exp", exp,
+                "trust_mark_type", delegatedTrustMarkType,
+                "logo_uri", baseUrl + "/static/trust-mark.png",
+                "ref", baseUrl + "/trust-marks/accredited-issuer/ref",
+                "delegation", trustMarkDelegation),
+                intermediateKey);
+
+        store.putEcKey("leaf-trustmark-delegated", leafKey);
+        store.putJwks("leaf-trustmark-delegated", leafJwks);
+        store.putEntityConfig("leaf-trustmark-delegated", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-trustmark-delegated",
+                "sub", baseUrl + "/leaf-trustmark-delegated",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/intermediate"),
+                "trust_marks", List.of(Map.of(
+                        "id", delegatedTrustMarkType,
+                        "trust_mark", delegatedTrustMark)),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Delegated Trust Mark Leaf"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-trustmark-delegated",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-trustmark-delegated",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-trustmark-delegated",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+
+        // Scenario 25: value operator merge conflict volgens OpenID Federation 6.1.3.1.1
+        store.putEcKey("leaf-policy-value-conflict", leafKey);
+        store.putJwks("leaf-policy-value-conflict", leafJwks);
+        store.putJwks("inter-value-conflict", intermediateJwks);
+
+        store.putEntityConfig("inter-value-conflict", builder.sign(linkedMap(
+                "iss", baseUrl + "/inter-value-conflict",
+                "sub", baseUrl + "/inter-value-conflict",
+                "iat", now, "exp", exp,
+                "jwks", intermediateJwks,
+                "authority_hints", List.of(baseUrl + "/anchor"),
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/inter-value-conflict/fetch",
+                        "display_name", "Value Conflict Intermediate"))),
+                intermediateKey));
+
+        store.putEntityConfig("leaf-policy-value-conflict", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-policy-value-conflict",
+                "sub", baseUrl + "/leaf-policy-value-conflict",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/inter-value-conflict"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Policy Value Conflict Leaf"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-policy-value-conflict",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/inter-value-conflict", baseUrl + "/leaf-policy-value-conflict",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/inter-value-conflict",
+                        "sub", baseUrl + "/leaf-policy-value-conflict",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks)),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "token_endpoint_auth_method", Map.of(
+                                                "value", "private_key_jwt")))),
+                        intermediateKey));
+
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-value-conflict",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/inter-value-conflict",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of()),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "token_endpoint_auth_method", Map.of(
+                                                "value", "client_secret_basic")))),
                         anchorKey));
 
         // Scenario 24: alles-in-een diepe keten met policies en meerdere authority hints
