@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.interfaces.ECPublicKey;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +54,9 @@ public class VerifyController {
 
     @SuppressWarnings("unchecked")
     private void verifyCredentialAgainstResolvedMetadata(SignedJWT credential, TrustChain chain) throws Exception {
+        verifyCredentialDates(credential);
+        verifyCredentialStatus(credential);
+
         Map<String, Object> resolvedMetadata = chain.resolvedMetadata();
         if (resolvedMetadata == null) {
             throw new IllegalArgumentException("Chain has no resolved metadata");
@@ -86,14 +90,68 @@ public class VerifyController {
 
         Map<String, Object> openidCredentialIssuer =
                 (Map<String, Object>) resolvedMetadata.get("openid_credential_issuer");
-        if (openidCredentialIssuer != null
-                && openidCredentialIssuer.get("credential_types_supported") instanceof List<?> supportedTypes) {
-            List<String> credentialTypes = extractCredentialTypes(credential);
-            boolean allowed = credentialTypes.stream().anyMatch(supportedTypes::contains);
-            if (!allowed) {
-                throw new IllegalArgumentException("Credential type " + credentialTypes +
-                        " is not allowed by resolved metadata policy");
+        if (openidCredentialIssuer != null) {
+            Object credentialIssuer = openidCredentialIssuer.get("credential_issuer");
+            if (credentialIssuer instanceof String expectedIssuer
+                    && !expectedIssuer.equals(credential.getJWTClaimsSet().getIssuer())) {
+                throw new IllegalArgumentException("Credential issuer " +
+                        credential.getJWTClaimsSet().getIssuer() +
+                        " is not trusted; expected " + expectedIssuer);
             }
+            if (openidCredentialIssuer.get("credential_types_supported") instanceof List<?> supportedTypes) {
+                List<String> credentialTypes = extractCredentialTypes(credential);
+                boolean allowed = credentialTypes.stream().anyMatch(supportedTypes::contains);
+                if (!allowed) {
+                    throw new IllegalArgumentException("Credential type " + credentialTypes +
+                            " is not allowed by resolved metadata policy");
+                }
+            }
+        }
+    }
+
+    private void verifyCredentialDates(SignedJWT credential) throws Exception {
+        long now = Instant.now().getEpochSecond();
+        if (credential.getJWTClaimsSet().getExpirationTime() == null) {
+            throw new IllegalArgumentException("Credential missing exp claim");
+        }
+        long exp = credential.getJWTClaimsSet().getExpirationTime().toInstant().getEpochSecond();
+        if (exp <= now) {
+            throw new IllegalArgumentException("Credential is expired");
+        }
+
+        long notBefore;
+        if (credential.getJWTClaimsSet().getNotBeforeTime() != null) {
+            notBefore = credential.getJWTClaimsSet().getNotBeforeTime().toInstant().getEpochSecond();
+        } else if (credential.getJWTClaimsSet().getIssueTime() != null) {
+            notBefore = credential.getJWTClaimsSet().getIssueTime().toInstant().getEpochSecond() - 60;
+        } else {
+            throw new IllegalArgumentException("Credential missing nbf and iat claims");
+        }
+        if (notBefore > now) {
+            throw new IllegalArgumentException("Credential not-before time has not been reached");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void verifyCredentialStatus(SignedJWT credential) throws Exception {
+        Object vcObj = credential.getJWTClaimsSet().getClaim("vc");
+        if (!(vcObj instanceof Map<?, ?> vc)) {
+            return;
+        }
+        Object statusObj = vc.get("credentialStatus");
+        if (statusObj == null) {
+            return;
+        }
+        if (!(statusObj instanceof Map<?, ?> status)) {
+            throw new IllegalArgumentException("credentialStatus must be an object");
+        }
+        Object revoked = status.get("revoked");
+        if (Boolean.TRUE.equals(revoked)) {
+            throw new IllegalArgumentException("Credential status indicates revoked credential");
+        }
+        Object statusPurpose = status.get("statusPurpose");
+        if (statusPurpose != null && !"revocation".equals(statusPurpose.toString())) {
+            throw new IllegalArgumentException("Unsupported credentialStatus.statusPurpose: " + statusPurpose);
         }
     }
 
