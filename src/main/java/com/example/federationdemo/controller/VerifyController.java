@@ -5,6 +5,8 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jwt.SignedJWT;
 import com.example.federationdemo.validation.TrustChain;
 import com.example.federationdemo.validation.TrustChainResolver;
+import com.example.federationdemo.validation.JwtParser;
+import com.example.federationdemo.validation.ParsedJwt;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,9 +25,35 @@ import java.util.Map;
 public class VerifyController {
 
     private final TrustChainResolver resolver;
+    private final JwtParser jwtParser;
 
-    public VerifyController(TrustChainResolver resolver) {
+    public VerifyController(TrustChainResolver resolver, JwtParser jwtParser) {
         this.resolver = resolver;
+        this.jwtParser = jwtParser;
+    }
+
+    @Operation(summary = "Raw credential verification with federation policy inspection")
+    @PostMapping(value = {"/v2/credential/raw/verify", "/api/v2/credential/raw/verify"},
+            consumes = "application/json",
+            produces = "application/json")
+    public RawVerifyResponse rawVerify(@RequestBody RawVerifyRequest request) {
+        try {
+            SignedJWT credential = SignedJWT.parse(request.credential_token());
+            String issuerIdentifier = credential.getJWTClaimsSet().getIssuer();
+            TrustChain chain = resolver.resolve(
+                    issuerIdentifier,
+                    request.trust_anchor_entity_id(),
+                    request.trust_mark_type());
+            verifyCredentialAgainstResolvedMetadata(credential, chain);
+            return buildRawVerifyResponse("VALID", null, chain);
+        } catch (Exception e) {
+            return new RawVerifyResponse(
+                    "INVALID",
+                    e.getMessage(),
+                    List.of(),
+                    List.of(new FederationPolicyResult("trust-chain", false, e.getMessage())),
+                    List.of());
+        }
     }
 
     @Operation(summary = "Verify trust chain for an issuer against a trust anchor")
@@ -175,4 +205,71 @@ public class VerifyController {
                                 String requiredTrustMarkId) {}
 
     public record VerifyResponse(boolean trusted, String issuer, String error) {}
+
+    private RawVerifyResponse buildRawVerifyResponse(String status, String error, TrustChain chain) {
+        List<TrustChainNode> nodes = buildTrustChainNodes(chain);
+        return new RawVerifyResponse(
+                status,
+                error,
+                nodes,
+                List.of(
+                        new FederationPolicyResult("trust-chain", true, "Trust chain resolved and validated"),
+                        new FederationPolicyResult("authority-hints", true, "Authority hints led to the trust anchor"),
+                        new FederationPolicyResult("metadata-policy", true, "Metadata policies were merged and applied"),
+                        new FederationPolicyResult("credential-signing-key", true, "Credential signing key is allowed by resolved vc_issuer.jwks")
+                ),
+                List.of(chain.resolvedMetadata()));
+    }
+
+    private List<TrustChainNode> buildTrustChainNodes(TrustChain chain) {
+        List<TrustChainNode> nodes = new ArrayList<>();
+        if (chain.statements().isEmpty()) {
+            return nodes;
+        }
+
+        ParsedJwt leaf = jwtParser.parse(chain.statements().get(0));
+        ParsedJwt anchor = jwtParser.parse(chain.statements().get(chain.statements().size() - 1));
+
+        Map<String, String> parentBySubject = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> policyByIssuer = new LinkedHashMap<>();
+
+        for (int i = 1; i < chain.statements().size() - 1; i++) {
+            ParsedJwt statement = jwtParser.parse(chain.statements().get(i));
+            parentBySubject.put(statement.sub(), statement.iss());
+            if (statement.metadataPolicy() != null) {
+                policyByIssuer.put(statement.iss(), statement.metadataPolicy());
+            }
+        }
+
+        String current = leaf.sub();
+        nodes.add(new TrustChainNode("leaf", current, leaf.metadata(), policyByIssuer.get(current)));
+        while (parentBySubject.containsKey(current)) {
+            String parent = parentBySubject.get(current);
+            boolean isAnchor = parent.equals(anchor.sub());
+            nodes.add(new TrustChainNode(
+                    isAnchor ? "trust_anchor" : "intermediate",
+                    parent,
+                    isAnchor ? anchor.metadata() : null,
+                    policyByIssuer.get(parent)));
+            current = parent;
+        }
+        return nodes;
+    }
+
+    public record RawVerifyRequest(String credential_token, String trust_anchor_entity_id, String trust_mark_type) {}
+
+    public record RawVerifyResponse(
+            String credential_verify_status,
+            String error,
+            List<TrustChainNode> trust_chain_nodes,
+            List<FederationPolicyResult> federation_policy_results,
+            List<Map<String, Object>> effective_federation_metadata) {}
+
+    public record TrustChainNode(
+            String role,
+            String entityId,
+            Map<String, Object> metadata,
+            Map<String, Object> metadataPolicy) {}
+
+    public record FederationPolicyResult(String check, boolean valid, String description) {}
 }
