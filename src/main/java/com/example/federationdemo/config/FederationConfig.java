@@ -571,9 +571,11 @@ public class FederationConfig {
                         intermediateKey));
 
         // ═════════════════════════════════════════════════════════════════════
-        // Scenario 13: chain dieper dan MAX_HOPS
+        // Scenario 13: chain dieper dan MAX_HOPS (12 intermediates, MAX=11)
         // ═════════════════════════════════════════════════════════════════════
 
+        store.putEcKey("leaf-deep", leafKey);
+        store.putJwks("leaf-deep", leafJwks);
         store.putEntityConfig("leaf-deep", builder.sign(linkedMap(
                 "iss", baseUrl + "/leaf-deep",
                 "sub", baseUrl + "/leaf-deep",
@@ -585,9 +587,10 @@ public class FederationConfig {
                         "vc_issuer", Map.of("jwks", leafJwks))),
                 leafKey));
 
-        for (int i = 1; i <= 6; i++) {
+        for (int i = 1; i <= 12; i++) {
             String entity = "inter-depth-" + i;
-            String parent = i == 6 ? baseUrl + "/anchor" : baseUrl + "/inter-depth-" + (i + 1);
+            String parent = i == 12 ? baseUrl + "/anchor" : baseUrl + "/inter-depth-" + (i + 1);
+            store.putJwks(entity, intermediateJwks);
             store.putEntityConfig(entity, builder.sign(linkedMap(
                     "iss", baseUrl + "/" + entity,
                     "sub", baseUrl + "/" + entity,
@@ -608,7 +611,7 @@ public class FederationConfig {
                         "jwks", leafJwks,
                         "metadata", Map.of("federation_entity", Map.of(), "vc_issuer", Map.of("jwks", leafJwks))),
                         intermediateKey));
-        for (int i = 2; i <= 6; i++) {
+        for (int i = 2; i <= 12; i++) {
             String issuer = baseUrl + "/inter-depth-" + i;
             String subject = baseUrl + "/inter-depth-" + (i - 1);
             store.putSubordinateStatement(issuer, subject,
@@ -620,14 +623,322 @@ public class FederationConfig {
                             "metadata", Map.of("federation_entity", Map.of())),
                             intermediateKey));
         }
-        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-depth-6",
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-depth-12",
                 builder.sign(linkedMap(
                         "iss", baseUrl + "/anchor",
-                        "sub", baseUrl + "/inter-depth-6",
+                        "sub", baseUrl + "/inter-depth-12",
                         "iat", now, "exp", exp,
                         "jwks", intermediateJwks,
                         "metadata", Map.of("federation_entity", Map.of())),
                         anchorKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 18: Geldig pad - keten diepte 3 (3 intermediates)
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEcKey("leaf-chain3", leafKey);
+        store.putJwks("leaf-chain3", leafJwks);
+        store.putEntityConfig("leaf-chain3", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-chain3",
+                "sub", baseUrl + "/leaf-chain3",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/inter-chain3-1"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Universiteit Utrecht (keten 3)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-chain3",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        for (int i = 1; i <= 3; i++) {
+            String entity = "inter-chain3-" + i;
+            String parent = i == 3 ? baseUrl + "/anchor" : baseUrl + "/inter-chain3-" + (i + 1);
+            store.putJwks(entity, intermediateJwks);
+            store.putEntityConfig(entity, builder.sign(linkedMap(
+                    "iss", baseUrl + "/" + entity,
+                    "sub", baseUrl + "/" + entity,
+                    "iat", now, "exp", exp,
+                    "jwks", intermediateJwks,
+                    "authority_hints", List.of(parent),
+                    "metadata", Map.of("federation_entity", Map.of(
+                            "federation_fetch_endpoint", baseUrl + "/" + entity + "/fetch",
+                            "display_name", "Keten-3 Intermediate " + i))),
+                    intermediateKey));
+        }
+
+        store.putSubordinateStatement(baseUrl + "/inter-chain3-1", baseUrl + "/leaf-chain3",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/inter-chain3-1",
+                        "sub", baseUrl + "/leaf-chain3",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+        for (int i = 2; i <= 3; i++) {
+            store.putSubordinateStatement(
+                    baseUrl + "/inter-chain3-" + i, baseUrl + "/inter-chain3-" + (i - 1),
+                    builder.sign(linkedMap(
+                            "iss", baseUrl + "/inter-chain3-" + i,
+                            "sub", baseUrl + "/inter-chain3-" + (i - 1),
+                            "iat", now, "exp", exp,
+                            "jwks", intermediateJwks,
+                            "metadata", Map.of("federation_entity", Map.of())),
+                            intermediateKey));
+        }
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-chain3-3",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/inter-chain3-3",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 19: Geldig pad - keten diepte 5 (5 intermediates)
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEcKey("leaf-chain5", leafKey);
+        store.putJwks("leaf-chain5", leafJwks);
+        store.putEntityConfig("leaf-chain5", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-chain5",
+                "sub", baseUrl + "/leaf-chain5",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/inter-chain5-1"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Hogeschool Leiden (keten 5)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-chain5",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        for (int i = 1; i <= 5; i++) {
+            String entity = "inter-chain5-" + i;
+            String parent = i == 5 ? baseUrl + "/anchor" : baseUrl + "/inter-chain5-" + (i + 1);
+            store.putJwks(entity, intermediateJwks);
+            store.putEntityConfig(entity, builder.sign(linkedMap(
+                    "iss", baseUrl + "/" + entity,
+                    "sub", baseUrl + "/" + entity,
+                    "iat", now, "exp", exp,
+                    "jwks", intermediateJwks,
+                    "authority_hints", List.of(parent),
+                    "metadata", Map.of("federation_entity", Map.of(
+                            "federation_fetch_endpoint", baseUrl + "/" + entity + "/fetch",
+                            "display_name", "Keten-5 Intermediate " + i))),
+                    intermediateKey));
+        }
+
+        store.putSubordinateStatement(baseUrl + "/inter-chain5-1", baseUrl + "/leaf-chain5",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/inter-chain5-1",
+                        "sub", baseUrl + "/leaf-chain5",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+        for (int i = 2; i <= 5; i++) {
+            store.putSubordinateStatement(
+                    baseUrl + "/inter-chain5-" + i, baseUrl + "/inter-chain5-" + (i - 1),
+                    builder.sign(linkedMap(
+                            "iss", baseUrl + "/inter-chain5-" + i,
+                            "sub", baseUrl + "/inter-chain5-" + (i - 1),
+                            "iat", now, "exp", exp,
+                            "jwks", intermediateJwks,
+                            "metadata", Map.of("federation_entity", Map.of())),
+                            intermediateKey));
+        }
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-chain5-5",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/inter-chain5-5",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 20: Geldig pad - keten diepte 10 (10 intermediates)
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEcKey("leaf-chain10", leafKey);
+        store.putJwks("leaf-chain10", leafJwks);
+        store.putEntityConfig("leaf-chain10", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-chain10",
+                "sub", baseUrl + "/leaf-chain10",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/inter-chain10-1"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "TU Delft (keten 10)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-chain10",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        for (int i = 1; i <= 10; i++) {
+            String entity = "inter-chain10-" + i;
+            String parent = i == 10 ? baseUrl + "/anchor" : baseUrl + "/inter-chain10-" + (i + 1);
+            store.putJwks(entity, intermediateJwks);
+            store.putEntityConfig(entity, builder.sign(linkedMap(
+                    "iss", baseUrl + "/" + entity,
+                    "sub", baseUrl + "/" + entity,
+                    "iat", now, "exp", exp,
+                    "jwks", intermediateJwks,
+                    "authority_hints", List.of(parent),
+                    "metadata", Map.of("federation_entity", Map.of(
+                            "federation_fetch_endpoint", baseUrl + "/" + entity + "/fetch",
+                            "display_name", "Keten-10 Intermediate " + i))),
+                    intermediateKey));
+        }
+
+        store.putSubordinateStatement(baseUrl + "/inter-chain10-1", baseUrl + "/leaf-chain10",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/inter-chain10-1",
+                        "sub", baseUrl + "/leaf-chain10",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+        for (int i = 2; i <= 10; i++) {
+            store.putSubordinateStatement(
+                    baseUrl + "/inter-chain10-" + i, baseUrl + "/inter-chain10-" + (i - 1),
+                    builder.sign(linkedMap(
+                            "iss", baseUrl + "/inter-chain10-" + i,
+                            "sub", baseUrl + "/inter-chain10-" + (i - 1),
+                            "iat", now, "exp", exp,
+                            "jwks", intermediateJwks,
+                            "metadata", Map.of("federation_entity", Map.of())),
+                            intermediateKey));
+        }
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-chain10-10",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/inter-chain10-10",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 21: 5 authority hints — 4 kapot, 1 geldig
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEcKey("leaf-5hints", leafKey);
+        store.putJwks("leaf-5hints", leafJwks);
+        store.putEntityConfig("leaf-5hints", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-5hints",
+                "sub", baseUrl + "/leaf-5hints",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(
+                        baseUrl + "/nonexistent-h1",
+                        baseUrl + "/nonexistent-h2",
+                        baseUrl + "/nonexistent-h3",
+                        baseUrl + "/nonexistent-h4",
+                        baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Vijf Hints Leaf (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-5hints",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-5hints",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-5hints",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 22: 10 authority hints — 9 kapot, 1 geldig
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEcKey("leaf-10hints", leafKey);
+        store.putJwks("leaf-10hints", leafJwks);
+        store.putEntityConfig("leaf-10hints", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-10hints",
+                "sub", baseUrl + "/leaf-10hints",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(
+                        baseUrl + "/nonexistent-h1",
+                        baseUrl + "/nonexistent-h2",
+                        baseUrl + "/nonexistent-h3",
+                        baseUrl + "/nonexistent-h4",
+                        baseUrl + "/nonexistent-h5",
+                        baseUrl + "/nonexistent-h6",
+                        baseUrl + "/nonexistent-h7",
+                        baseUrl + "/nonexistent-h8",
+                        baseUrl + "/nonexistent-h9",
+                        baseUrl + "/intermediate"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Tien Hints Leaf (demo)"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-10hints",
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/intermediate", baseUrl + "/leaf-10hints",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/intermediate",
+                        "sub", baseUrl + "/leaf-10hints",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks))),
+                        intermediateKey));
+
+        // ═════════════════════════════════════════════════════════════════════
+        // Scenario 23: 10 authority hints — alle ongeldig
+        // ═════════════════════════════════════════════════════════════════════
+
+        store.putEcKey("leaf-10hints-fail", leafKey);
+        store.putJwks("leaf-10hints-fail", leafJwks);
+        store.putEntityConfig("leaf-10hints-fail", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-10hints-fail",
+                "sub", baseUrl + "/leaf-10hints-fail",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(
+                        baseUrl + "/nonexistent-h1",
+                        baseUrl + "/nonexistent-h2",
+                        baseUrl + "/nonexistent-h3",
+                        baseUrl + "/nonexistent-h4",
+                        baseUrl + "/nonexistent-h5",
+                        baseUrl + "/nonexistent-h6",
+                        baseUrl + "/nonexistent-h7",
+                        baseUrl + "/nonexistent-h8",
+                        baseUrl + "/nonexistent-h9",
+                        baseUrl + "/nonexistent-h10"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Alle Hints Kapot (demo)"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+        // Bewust GEEN subordinate statement — alle hints verwijzen nergens
 
         // ═════════════════════════════════════════════════════════════════════
         // Scenario 14: max_path_length: 0 laat geen intermediate toe

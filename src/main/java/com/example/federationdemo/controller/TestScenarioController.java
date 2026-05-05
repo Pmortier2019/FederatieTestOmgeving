@@ -143,6 +143,25 @@ public class TestScenarioController {
             case "leaf-nohint" -> List.of(baseUrl + "/nonexistent-1", baseUrl + "/nonexistent-2");
             case "leaf-deep" -> List.of(baseUrl + "/inter-depth-1");
             case "leaf-maxpath" -> List.of(baseUrl + "/intermediate-maxpath");
+            case "leaf-chain3" -> List.of(baseUrl + "/inter-chain3-1");
+            case "leaf-chain5" -> List.of(baseUrl + "/inter-chain5-1");
+            case "leaf-chain10" -> List.of(baseUrl + "/inter-chain10-1");
+            case "leaf-5hints" -> List.of(
+                    baseUrl + "/nonexistent-h1", baseUrl + "/nonexistent-h2",
+                    baseUrl + "/nonexistent-h3", baseUrl + "/nonexistent-h4",
+                    baseUrl + "/intermediate");
+            case "leaf-10hints" -> List.of(
+                    baseUrl + "/nonexistent-h1", baseUrl + "/nonexistent-h2",
+                    baseUrl + "/nonexistent-h3", baseUrl + "/nonexistent-h4",
+                    baseUrl + "/nonexistent-h5", baseUrl + "/nonexistent-h6",
+                    baseUrl + "/nonexistent-h7", baseUrl + "/nonexistent-h8",
+                    baseUrl + "/nonexistent-h9", baseUrl + "/intermediate");
+            case "leaf-10hints-fail" -> List.of(
+                    baseUrl + "/nonexistent-h1", baseUrl + "/nonexistent-h2",
+                    baseUrl + "/nonexistent-h3", baseUrl + "/nonexistent-h4",
+                    baseUrl + "/nonexistent-h5", baseUrl + "/nonexistent-h6",
+                    baseUrl + "/nonexistent-h7", baseUrl + "/nonexistent-h8",
+                    baseUrl + "/nonexistent-h9", baseUrl + "/nonexistent-h10");
             default -> List.of(baseUrl + "/intermediate");
         };
     }
@@ -166,10 +185,69 @@ public class TestScenarioController {
                     baseUrl + "/inter-depth-3/fetch?sub=" + baseUrl + "/inter-depth-2",
                     baseUrl + "/inter-depth-4/fetch?sub=" + baseUrl + "/inter-depth-3",
                     baseUrl + "/inter-depth-5/fetch?sub=" + baseUrl + "/inter-depth-4",
-                    baseUrl + "/inter-depth-6/fetch?sub=" + baseUrl + "/inter-depth-5");
+                    baseUrl + "/inter-depth-6/fetch?sub=" + baseUrl + "/inter-depth-5",
+                    baseUrl + "/inter-depth-7/fetch?sub=" + baseUrl + "/inter-depth-6",
+                    baseUrl + "/inter-depth-8/fetch?sub=" + baseUrl + "/inter-depth-7",
+                    baseUrl + "/inter-depth-9/fetch?sub=" + baseUrl + "/inter-depth-8",
+                    baseUrl + "/inter-depth-10/fetch?sub=" + baseUrl + "/inter-depth-9",
+                    baseUrl + "/inter-depth-11/fetch?sub=" + baseUrl + "/inter-depth-10");
             case "leaf-maxpath" -> List.of(
                     baseUrl + "/intermediate-maxpath/fetch?sub=" + issuer,
                     baseUrl + "/anchor/fetch?sub=" + baseUrl + "/intermediate-maxpath");
+            case "leaf-chain3" -> List.of(
+                    baseUrl + "/inter-chain3-1/fetch?sub=" + issuer,
+                    baseUrl + "/inter-chain3-2/fetch?sub=" + baseUrl + "/inter-chain3-1",
+                    baseUrl + "/inter-chain3-3/fetch?sub=" + baseUrl + "/inter-chain3-2",
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-chain3-3");
+            case "leaf-chain5" -> List.of(
+                    baseUrl + "/inter-chain5-1/fetch?sub=" + issuer,
+                    baseUrl + "/inter-chain5-2/fetch?sub=" + baseUrl + "/inter-chain5-1",
+                    baseUrl + "/inter-chain5-3/fetch?sub=" + baseUrl + "/inter-chain5-2",
+                    baseUrl + "/inter-chain5-4/fetch?sub=" + baseUrl + "/inter-chain5-3",
+                    baseUrl + "/inter-chain5-5/fetch?sub=" + baseUrl + "/inter-chain5-4",
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-chain5-5");
+            case "leaf-chain10" -> List.of(
+                    baseUrl + "/inter-chain10-1/fetch?sub=" + issuer,
+                    baseUrl + "/inter-chain10-2/fetch?sub=" + baseUrl + "/inter-chain10-1",
+                    baseUrl + "/inter-chain10-3/fetch?sub=" + baseUrl + "/inter-chain10-2",
+                    baseUrl + "/inter-chain10-4/fetch?sub=" + baseUrl + "/inter-chain10-3",
+                    baseUrl + "/inter-chain10-5/fetch?sub=" + baseUrl + "/inter-chain10-4",
+                    baseUrl + "/inter-chain10-6/fetch?sub=" + baseUrl + "/inter-chain10-5",
+                    baseUrl + "/inter-chain10-7/fetch?sub=" + baseUrl + "/inter-chain10-6",
+                    baseUrl + "/inter-chain10-8/fetch?sub=" + baseUrl + "/inter-chain10-7",
+                    baseUrl + "/inter-chain10-9/fetch?sub=" + baseUrl + "/inter-chain10-8",
+                    baseUrl + "/inter-chain10-10/fetch?sub=" + baseUrl + "/inter-chain10-9",
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-chain10-10");
+            case "leaf-5hints" -> List.of(
+                    baseUrl + "/nonexistent-h1/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h2/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h3/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h4/.well-known/openid-federation",
+                    baseUrl + "/intermediate/fetch?sub=" + issuer,
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/intermediate");
+            case "leaf-10hints" -> List.of(
+                    baseUrl + "/nonexistent-h1/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h2/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h3/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h4/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h5/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h6/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h7/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h8/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h9/.well-known/openid-federation",
+                    baseUrl + "/intermediate/fetch?sub=" + issuer,
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/intermediate");
+            case "leaf-10hints-fail" -> List.of(
+                    baseUrl + "/nonexistent-h1/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h2/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h3/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h4/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h5/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h6/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h7/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h8/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h9/.well-known/openid-federation",
+                    baseUrl + "/nonexistent-h10/.well-known/openid-federation");
             default -> List.of(
                     baseUrl + "/intermediate/fetch?sub=" + issuer,
                     baseUrl + "/anchor/fetch?sub=" + baseUrl + "/intermediate");
@@ -240,7 +318,25 @@ public class TestScenarioController {
                         "value policy zet vc_issuer.jwks op dezelfde geldige sleutel."),
                 new TestScenario(17, "Metadata policy crit - bekende operator", "policy", true,
                         "leaf-policy-crit-ok", "/anchor", "DiplomaCertificate",
-                        "metadata_policy_crit gebruikt bekende operator subset_of.")
+                        "metadata_policy_crit gebruikt bekende operator subset_of."),
+                new TestScenario(18, "Geldig pad - keten diepte 3", "depth", true,
+                        "leaf-chain3", "/anchor", "DiplomaCertificate",
+                        "Leaf via 3 intermediates naar trust anchor — geldige diepe keten."),
+                new TestScenario(19, "Geldig pad - keten diepte 5", "depth", true,
+                        "leaf-chain5", "/anchor", "DiplomaCertificate",
+                        "Leaf via 5 intermediates naar trust anchor — geldige diepe keten."),
+                new TestScenario(20, "Geldig pad - keten diepte 10", "depth", true,
+                        "leaf-chain10", "/anchor", "DiplomaCertificate",
+                        "Leaf via 10 intermediates naar trust anchor — maximale geldige diepte."),
+                new TestScenario(21, "Vijf authority hints - 4 kapot, 1 geldig", "authority", true,
+                        "leaf-5hints", "/anchor", "DiplomaCertificate",
+                        "Resolver probeert 4 ongeldige hints voordat de geldige hint slaagt."),
+                new TestScenario(22, "Tien authority hints - 9 kapot, 1 geldig", "authority", true,
+                        "leaf-10hints", "/anchor", "DiplomaCertificate",
+                        "Resolver probeert 9 ongeldige hints voordat de geldige hint slaagt."),
+                new TestScenario(23, "Tien authority hints - alle ongeldig", "authority", false,
+                        "leaf-10hints-fail", "/anchor", "DiplomaCertificate",
+                        "Geen van de 10 authority hints leidt naar de trust anchor.")
         );
     }
 
