@@ -273,6 +273,92 @@ public class FederationConfig {
                                                 "value", "client_secret_basic")))),
                         anchorKey));
 
+        // Scenario 27: leaf -> intermediate A -> intermediate B -> anchor, policies op beide intermediates
+        store.putEcKey("leaf-policy-2ints", leafKey);
+        store.putJwks("leaf-policy-2ints", leafJwks);
+        store.putJwks("inter-policy-a", intermediateJwks);
+        store.putJwks("inter-policy-b", intermediateJwks);
+
+        store.putEntityConfig("inter-policy-b", builder.sign(linkedMap(
+                "iss", baseUrl + "/inter-policy-b",
+                "sub", baseUrl + "/inter-policy-b",
+                "iat", now, "exp", exp,
+                "jwks", intermediateJwks,
+                "authority_hints", List.of(baseUrl + "/anchor"),
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/inter-policy-b/fetch",
+                        "display_name", "Intermediate B Policy"))),
+                intermediateKey));
+
+        store.putEntityConfig("inter-policy-a", builder.sign(linkedMap(
+                "iss", baseUrl + "/inter-policy-a",
+                "sub", baseUrl + "/inter-policy-a",
+                "iat", now, "exp", exp,
+                "jwks", intermediateJwks,
+                "authority_hints", List.of(baseUrl + "/inter-policy-b"),
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/inter-policy-a/fetch",
+                        "display_name", "Intermediate A Policy"))),
+                intermediateKey));
+
+        store.putEntityConfig("leaf-policy-2ints", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-policy-2ints",
+                "sub", baseUrl + "/leaf-policy-2ints",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(baseUrl + "/inter-policy-a"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Leaf Policy 2 Intermediates"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-policy-2ints",
+                                "credential_types_supported", List.of("DiplomaCertificate"),
+                                "authorization_servers", List.of(
+                                        baseUrl + "/as-policy-a",
+                                        baseUrl + "/as-policy-b"),
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        store.putSubordinateStatement(baseUrl + "/inter-policy-a", baseUrl + "/leaf-policy-2ints",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/inter-policy-a",
+                        "sub", baseUrl + "/leaf-policy-2ints",
+                        "iat", now, "exp", exp,
+                        "jwks", leafJwks,
+                        "metadata", Map.of(
+                                "federation_entity", Map.of(),
+                                "openid_credential_issuer", Map.of(),
+                                "vc_issuer", Map.of("jwks", leafJwks)),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "credential_issuer", Map.of(
+                                                "value", baseUrl + "/leaf-policy-2ints"),
+                                        "credential_types_supported", Map.of(
+                                                "subset_of", List.of("DiplomaCertificate", "StudentCardCredential"))))),
+                        intermediateKey));
+
+        store.putSubordinateStatement(baseUrl + "/inter-policy-b", baseUrl + "/inter-policy-a",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/inter-policy-b",
+                        "sub", baseUrl + "/inter-policy-a",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of()),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "authorization_servers", Map.of(
+                                                "subset_of", List.of(baseUrl + "/as-policy-a"))))),
+                        intermediateKey));
+
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-policy-b",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/inter-policy-b",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
         // Scenario 24: alles-in-een diepe keten met policies en meerdere authority hints
         store.putEcKey("leaf-all-in", leafKey);
         store.putJwks("leaf-all-in", leafJwks);
