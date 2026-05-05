@@ -507,18 +507,6 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
               </div>
             </div>
 
-            <div class="node role-leaf" id="node-leaf-policy-type"
-                 data-slug="leaf-policy-type" data-name="Policy: Type beperkt" data-role="OP / Leaf" data-valid="false" data-scenario="6"
-                 onclick="selectNode('leaf-policy-type')" onmouseenter="showTip(event,'leaf-policy-type')" onmouseleave="hideTip()">
-              <div class="node-dot">—</div>
-              <div class="node-name">Policy: Type beperkt</div>
-              <div class="node-ep" id="ep-leaf-policy-type">/leaf-policy-type/.well-known/openid-federation</div>
-              <div class="node-tags">
-                <span class="node-tag scenario">S6</span>
-                <span class="node-tag valid-false">verwacht: ongeldig</span>
-              </div>
-            </div>
-
             <div class="node role-leaf" id="node-leaf-policy-jwks"
                  data-slug="leaf-policy-jwks" data-name="Policy: JWKS overschreven" data-role="OP / Leaf" data-valid="false" data-scenario="7"
                  onclick="selectNode('leaf-policy-jwks')" onmouseenter="showTip(event,'leaf-policy-jwks')" onmouseleave="hideTip()">
@@ -618,15 +606,15 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
         <div class="special-nodes">
 
           <div class="node role-leaf" id="node-leaf-chain3"
-               data-slug="leaf-chain3" data-name="Universiteit Utrecht (keten 3)" data-role="OP / Leaf" data-valid="true" data-scenario="18"
+               data-slug="leaf-chain3" data-name="Leaf via 3 intermediates" data-role="OP / Leaf" data-valid="true" data-scenario="18"
                onclick="selectNode('leaf-chain3')" onmouseenter="showTip(event,'leaf-chain3')" onmouseleave="hideTip()">
             <div class="node-dot">—</div>
-            <div class="node-name">Universiteit Utrecht</div>
+            <div class="node-name">Leaf via 3 intermediates</div>
             <div class="node-ep" id="ep-leaf-chain3">/leaf-chain3/.well-known/openid-federation</div>
             <div class="node-tags">
               <span class="node-tag scenario">S18</span>
               <span class="node-tag valid-true">verwacht: geldig</span>
-              <span class="node-tag" style="color:var(--purple);border-color:#bc8cff55;">diepte: 3</span>
+              <span class="node-tag" style="color:var(--purple);border-color:#bc8cff55;">3 intermediates</span>
             </div>
           </div>
 
@@ -653,6 +641,19 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
               <span class="node-tag scenario">S20</span>
               <span class="node-tag valid-true">verwacht: geldig</span>
               <span class="node-tag" style="color:var(--purple);border-color:#bc8cff55;">diepte: 10</span>
+            </div>
+          </div>
+
+          <div class="node role-leaf" id="node-leaf-all-in"
+               data-slug="leaf-all-in" data-name="Alles-in-een diepe keten" data-role="OP / Leaf" data-valid="true" data-scenario="24"
+               onclick="selectNode('leaf-all-in')" onmouseenter="showTip(event,'leaf-all-in')" onmouseleave="hideTip()">
+            <div class="node-dot">â€”</div>
+            <div class="node-name">Alles-in-een diepe keten</div>
+            <div class="node-ep" id="ep-leaf-all-in">/leaf-all-in/.well-known/openid-federation</div>
+            <div class="node-tags">
+              <span class="node-tag scenario">S24</span>
+              <span class="node-tag valid-true">verwacht: geldig</span>
+              <span class="node-tag" style="color:var(--purple);border-color:#bc8cff55;">10 ints + policy</span>
             </div>
           </div>
 
@@ -770,7 +771,6 @@ const ANCHOR_FOR = {
   'leaf-wrongkey':       '/anchor',
   'leaf-subwrong':       '/anchor',
   'leaf-multihint':      '/anchor',
-  'leaf-policy-type':    '/anchor',
   'leaf-policy-jwks':    '/anchor',
   'leaf-policy-type-ok': '/anchor',
   'leaf-policy-jwks-ok': '/anchor',
@@ -780,6 +780,7 @@ const ANCHOR_FOR = {
   'leaf-chain3':         '/anchor',
   'leaf-chain5':         '/anchor',
   'leaf-chain10':        '/anchor',
+  'leaf-all-in':         '/anchor',
   'leaf-5hints':         '/anchor',
   'leaf-10hints':        '/anchor',
   'leaf-wronganchor':    '/rogue',
@@ -794,7 +795,6 @@ const SCENARIO_ID = {
   'rogue':               3,
   'leaf-expired':        4,
   'leaf-wrongkey':       5,
-  'leaf-policy-type':    6,
   'leaf-policy-jwks':    7,
   'leaf-multihint':      9,
   'leaf-nohint':         10,
@@ -808,6 +808,7 @@ const SCENARIO_ID = {
   'leaf-chain3':         18,
   'leaf-chain5':         19,
   'leaf-chain10':        20,
+  'leaf-all-in':         24,
   'leaf-5hints':         21,
   'leaf-10hints':        22,
   'leaf-10hints-fail':   23,
@@ -825,7 +826,6 @@ const PARENTS = {
   'leaf-multihint':      'intermediate',
   'leaf-nohint':         null,
   'rogue':               null,
-  'leaf-policy-type':    'intermediate',
   'leaf-policy-jwks':    'intermediate',
   'leaf-deep':           'inter-depth-1',
   'leaf-maxpath':        'intermediate-maxpath',
@@ -836,6 +836,7 @@ const PARENTS = {
   'leaf-chain3':         'inter-chain3-1',
   'leaf-chain5':         'inter-chain5-1',
   'leaf-chain10':        'inter-chain10-1',
+  'leaf-all-in':         'inter-all-in-1',
   'leaf-5hints':         'intermediate',
   'leaf-10hints':        'intermediate',
   'leaf-10hints-fail':   null,
@@ -846,6 +847,8 @@ const DEEP_CHAIN_INTERS = {
   'leaf-chain5':  ['inter-chain5-1','inter-chain5-2','inter-chain5-3','inter-chain5-4','inter-chain5-5'],
   'leaf-chain10': ['inter-chain10-1','inter-chain10-2','inter-chain10-3','inter-chain10-4','inter-chain10-5',
                    'inter-chain10-6','inter-chain10-7','inter-chain10-8','inter-chain10-9','inter-chain10-10'],
+  'leaf-all-in':  ['inter-all-in-1','inter-all-in-2','inter-all-in-3','inter-all-in-4','inter-all-in-5',
+                   'inter-all-in-6','inter-all-in-7','inter-all-in-8','inter-all-in-9','inter-all-in-10'],
   'leaf-deep':    ['inter-depth-1','inter-depth-2','inter-depth-3','inter-depth-4','inter-depth-5',
                    'inter-depth-6','inter-depth-7','inter-depth-8','inter-depth-9','inter-depth-10',
                    'inter-depth-11','inter-depth-12'],
@@ -861,7 +864,6 @@ const EDGES = [
   ['intermediate','leaf-subwrong'],
   ['intermediate','leaf-multihint'],
   ['intermediate','leaf-nohint'],
-  ['intermediate','leaf-policy-type'],
   ['intermediate','leaf-policy-jwks'],
   ['intermediate','leaf-policy-type-ok'],
   ['intermediate','leaf-policy-jwks-ok'],

@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,6 +156,99 @@ public class FederationConfig {
                         "iat", now, "exp", exp,
                         "jwks", intermediateJwks,
                         "metadata", Map.of("federation_entity", Map.of())),
+                        anchorKey));
+
+        // Scenario 24: alles-in-een diepe keten met policies en meerdere authority hints
+        store.putEcKey("leaf-all-in", leafKey);
+        store.putJwks("leaf-all-in", leafJwks);
+        store.putEntityConfig("leaf-all-in", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-all-in",
+                "sub", baseUrl + "/leaf-all-in",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", authorityHints("all-in-leaf", baseUrl + "/inter-all-in-1", 5),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Alles-in-een diepe keten"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-all-in",
+                                "credential_types_supported", List.of("DiplomaCertificate"),
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        for (int i = 1; i <= 10; i++) {
+            String entity = "inter-all-in-" + i;
+            String parent = i == 10 ? baseUrl + "/anchor" : baseUrl + "/inter-all-in-" + (i + 1);
+            int hintCount = 1 + (i % 5);
+            store.putJwks(entity, intermediateJwks);
+            store.putEntityConfig(entity, builder.sign(linkedMap(
+                    "iss", baseUrl + "/" + entity,
+                    "sub", baseUrl + "/" + entity,
+                    "iat", now, "exp", exp,
+                    "jwks", intermediateJwks,
+                    "authority_hints", authorityHints("all-in-" + i, parent, hintCount),
+                    "metadata", Map.of("federation_entity", Map.of(
+                            "federation_fetch_endpoint", baseUrl + "/" + entity + "/fetch",
+                            "display_name", "All-in Intermediate " + i + " (" + hintCount + " hints)"))),
+                    intermediateKey));
+        }
+
+        Map<String, Object> allInLeafStatement = linkedMap(
+                "iss", baseUrl + "/inter-all-in-1",
+                "sub", baseUrl + "/leaf-all-in",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "metadata", Map.of(
+                        "federation_entity", Map.of(),
+                        "openid_credential_issuer", Map.of(),
+                        "vc_issuer", Map.of("jwks", leafJwks)),
+                "metadata_policy", Map.of(
+                        "openid_credential_issuer", Map.of(
+                                "credential_types_supported", Map.of(
+                                        "subset_of", List.of("DiplomaCertificate", "StudentCardCredential")),
+                                "grant_types_supported", Map.of(
+                                        "default", List.of("urn:ietf:params:oauth:grant-type:pre-authorized_code")))));
+        store.putSubordinateStatement(baseUrl + "/inter-all-in-1", baseUrl + "/leaf-all-in",
+                builder.sign(allInLeafStatement, intermediateKey));
+
+        for (int i = 2; i <= 10; i++) {
+            Map<String, Object> statement = linkedMap(
+                    "iss", baseUrl + "/inter-all-in-" + i,
+                    "sub", baseUrl + "/inter-all-in-" + (i - 1),
+                    "iat", now, "exp", exp,
+                    "jwks", intermediateJwks,
+                    "metadata", Map.of("federation_entity", Map.of()));
+            if (i == 5) {
+                statement.put("metadata_policy", Map.of(
+                        "openid_credential_issuer", Map.of(
+                                "token_endpoint_auth_method", Map.of(
+                                        "one_of", List.of("private_key_jwt")))));
+            }
+            if (i == 8) {
+                statement.put("metadata_policy", Map.of(
+                        "openid_credential_issuer", Map.of(
+                                "display", Map.of(
+                                        "default", List.of(Map.of(
+                                                "name", "All-in diploma credential",
+                                                "locale", "nl-NL"))))));
+            }
+            store.putSubordinateStatement(
+                    baseUrl + "/inter-all-in-" + i,
+                    baseUrl + "/inter-all-in-" + (i - 1),
+                    builder.sign(statement, intermediateKey));
+        }
+
+        store.putSubordinateStatement(baseUrl + "/anchor", baseUrl + "/inter-all-in-10",
+                builder.sign(linkedMap(
+                        "iss", baseUrl + "/anchor",
+                        "sub", baseUrl + "/inter-all-in-10",
+                        "iat", now, "exp", exp,
+                        "jwks", intermediateJwks,
+                        "metadata", Map.of("federation_entity", Map.of()),
+                        "metadata_policy", Map.of(
+                                "openid_credential_issuer", Map.of(
+                                        "credential_issuer", Map.of(
+                                                "value", baseUrl + "/leaf-all-in")))),
                         anchorKey));
 
         // ── Intermediate → Leaf ───────────────────────────────────────────────
@@ -645,7 +739,7 @@ public class FederationConfig {
                 "jwks", leafJwks,
                 "authority_hints", List.of(baseUrl + "/inter-chain3-1"),
                 "metadata", Map.of(
-                        "federation_entity", Map.of("display_name", "Universiteit Utrecht (keten 3)"),
+                        "federation_entity", Map.of("display_name", "Leaf via 3 intermediates"),
                         "openid_credential_issuer", Map.of(
                                 "credential_issuer", baseUrl + "/leaf-chain3",
                                 "token_endpoint_auth_method", "private_key_jwt"),
@@ -1009,6 +1103,15 @@ public class FederationConfig {
         keyMap.put("x", pub.getX().toString());
         keyMap.put("y", pub.getY().toString());
         return Map.of("keys", List.of(keyMap));
+    }
+
+    private List<String> authorityHints(String label, String validParent, int totalHints) {
+        List<String> hints = new ArrayList<>();
+        for (int i = 1; i < totalHints; i++) {
+            hints.add(baseUrl + "/nonexistent-" + label + "-hint-" + i);
+        }
+        hints.add(validParent);
+        return hints;
     }
 
     /** Bouwt een LinkedHashMap met afwisselend key-value paren. */
