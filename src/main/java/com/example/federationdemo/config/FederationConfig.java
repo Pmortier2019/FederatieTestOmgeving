@@ -1380,15 +1380,18 @@ public class FederationConfig {
     private void putSubordinate(EntityStore store, StatementBuilder builder, String issuer,
                                 String subject, Map<String, Object> subjectJwks, ECKey signingKey,
                                 long now, long exp) {
+        Map<String, Object> metadata = subject.endsWith("/leaf-3paths")
+                ? Map.of(
+                        "federation_entity", Map.of(),
+                        "openid_credential_issuer", Map.of(),
+                        "vc_issuer", Map.of("jwks", subjectJwks))
+                : Map.of("federation_entity", Map.of());
         store.putSubordinateStatement(issuer, subject, builder.sign(linkedMap(
                 "iss", issuer,
                 "sub", subject,
                 "iat", now, "exp", exp,
                 "jwks", subjectJwks,
-                "metadata", Map.of(
-                        "federation_entity", Map.of(),
-                        "openid_credential_issuer", Map.of(),
-                        "vc_issuer", Map.of("jwks", subjectJwks))),
+                "metadata", metadata),
                 signingKey));
     }
 
