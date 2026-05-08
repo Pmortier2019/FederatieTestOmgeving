@@ -359,6 +359,53 @@ public class FederationConfig {
                         "metadata", Map.of("federation_entity", Map.of())),
                         anchorKey));
 
+        // Scenario 28: een leaf met 3 geldige trust paths van verschillende lengte
+        store.putEcKey("leaf-3paths", leafKey);
+        store.putJwks("leaf-3paths", leafJwks);
+        for (String entity : List.of(
+                "inter-3paths-a1",
+                "inter-3paths-b1", "inter-3paths-b2",
+                "inter-3paths-c1", "inter-3paths-c2", "inter-3paths-c3")) {
+            store.putJwks(entity, intermediateJwks);
+        }
+
+        store.putEntityConfig("leaf-3paths", builder.sign(linkedMap(
+                "iss", baseUrl + "/leaf-3paths",
+                "sub", baseUrl + "/leaf-3paths",
+                "iat", now, "exp", exp,
+                "jwks", leafJwks,
+                "authority_hints", List.of(
+                        baseUrl + "/inter-3paths-a1",
+                        baseUrl + "/inter-3paths-b1",
+                        baseUrl + "/inter-3paths-c1"),
+                "metadata", Map.of(
+                        "federation_entity", Map.of("display_name", "Leaf met 3 geldige paden"),
+                        "openid_credential_issuer", Map.of(
+                                "credential_issuer", baseUrl + "/leaf-3paths",
+                                "credential_types_supported", List.of("DiplomaCertificate"),
+                                "token_endpoint_auth_method", "private_key_jwt"),
+                        "vc_issuer", Map.of("jwks", leafJwks))),
+                leafKey));
+
+        putIntermediateConfig(store, builder, "inter-3paths-a1", baseUrl + "/anchor", intermediateJwks, intermediateKey, now, exp, "Pad A Intermediate 1");
+        putIntermediateConfig(store, builder, "inter-3paths-b1", baseUrl + "/inter-3paths-b2", intermediateJwks, intermediateKey, now, exp, "Pad B Intermediate 1");
+        putIntermediateConfig(store, builder, "inter-3paths-b2", baseUrl + "/anchor", intermediateJwks, intermediateKey, now, exp, "Pad B Intermediate 2");
+        putIntermediateConfig(store, builder, "inter-3paths-c1", baseUrl + "/inter-3paths-c2", intermediateJwks, intermediateKey, now, exp, "Pad C Intermediate 1");
+        putIntermediateConfig(store, builder, "inter-3paths-c2", baseUrl + "/inter-3paths-c3", intermediateJwks, intermediateKey, now, exp, "Pad C Intermediate 2");
+        putIntermediateConfig(store, builder, "inter-3paths-c3", baseUrl + "/anchor", intermediateJwks, intermediateKey, now, exp, "Pad C Intermediate 3");
+
+        putSubordinate(store, builder, baseUrl + "/inter-3paths-a1", baseUrl + "/leaf-3paths", leafJwks, intermediateKey, now, exp);
+        putSubordinate(store, builder, baseUrl + "/anchor", baseUrl + "/inter-3paths-a1", intermediateJwks, anchorKey, now, exp);
+
+        putSubordinate(store, builder, baseUrl + "/inter-3paths-b1", baseUrl + "/leaf-3paths", leafJwks, intermediateKey, now, exp);
+        putSubordinate(store, builder, baseUrl + "/inter-3paths-b2", baseUrl + "/inter-3paths-b1", intermediateJwks, intermediateKey, now, exp);
+        putSubordinate(store, builder, baseUrl + "/anchor", baseUrl + "/inter-3paths-b2", intermediateJwks, anchorKey, now, exp);
+
+        putSubordinate(store, builder, baseUrl + "/inter-3paths-c1", baseUrl + "/leaf-3paths", leafJwks, intermediateKey, now, exp);
+        putSubordinate(store, builder, baseUrl + "/inter-3paths-c2", baseUrl + "/inter-3paths-c1", intermediateJwks, intermediateKey, now, exp);
+        putSubordinate(store, builder, baseUrl + "/inter-3paths-c3", baseUrl + "/inter-3paths-c2", intermediateJwks, intermediateKey, now, exp);
+        putSubordinate(store, builder, baseUrl + "/anchor", baseUrl + "/inter-3paths-c3", intermediateJwks, anchorKey, now, exp);
+
         // Scenario 24: alles-in-een diepe keten met policies en meerdere authority hints
         store.putEcKey("leaf-all-in", leafKey);
         store.putJwks("leaf-all-in", leafJwks);
@@ -1313,6 +1360,36 @@ public class FederationConfig {
         }
         hints.add(validParent);
         return hints;
+    }
+
+    private void putIntermediateConfig(EntityStore store, StatementBuilder builder, String entity,
+                                       String parent, Map<String, Object> jwks, ECKey key,
+                                       long now, long exp, String displayName) {
+        store.putEntityConfig(entity, builder.sign(linkedMap(
+                "iss", baseUrl + "/" + entity,
+                "sub", baseUrl + "/" + entity,
+                "iat", now, "exp", exp,
+                "jwks", jwks,
+                "authority_hints", List.of(parent),
+                "metadata", Map.of("federation_entity", Map.of(
+                        "federation_fetch_endpoint", baseUrl + "/" + entity + "/fetch",
+                        "display_name", displayName))),
+                key));
+    }
+
+    private void putSubordinate(EntityStore store, StatementBuilder builder, String issuer,
+                                String subject, Map<String, Object> subjectJwks, ECKey signingKey,
+                                long now, long exp) {
+        store.putSubordinateStatement(issuer, subject, builder.sign(linkedMap(
+                "iss", issuer,
+                "sub", subject,
+                "iat", now, "exp", exp,
+                "jwks", subjectJwks,
+                "metadata", Map.of(
+                        "federation_entity", Map.of(),
+                        "openid_credential_issuer", Map.of(),
+                        "vc_issuer", Map.of("jwks", subjectJwks))),
+                signingKey));
     }
 
     /** Bouwt een LinkedHashMap met afwisselend key-value paren. */

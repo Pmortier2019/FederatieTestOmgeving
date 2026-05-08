@@ -52,6 +52,7 @@ public class VerifyController {
                     e.getMessage(),
                     List.of(),
                     List.of(new FederationPolicyResult("trust-chain", false, e.getMessage())),
+                    List.of(),
                     List.of());
         }
     }
@@ -218,6 +219,7 @@ public class VerifyController {
                         new FederationPolicyResult("metadata-policy", true, "Metadata policies were merged and applied"),
                         new FederationPolicyResult("credential-signing-key", true, "Credential signing key is allowed by resolved vc_issuer.jwks")
                 ),
+                buildAvailableTrustPaths(nodes),
                 List.of(chain.resolvedMetadata()));
     }
 
@@ -256,6 +258,40 @@ public class VerifyController {
         return nodes;
     }
 
+    private List<List<TrustChainNode>> buildAvailableTrustPaths(List<TrustChainNode> selectedPath) {
+        if (selectedPath.isEmpty()) {
+            return List.of();
+        }
+
+        String leafId = selectedPath.get(0).entityId();
+        if (!leafId.endsWith("/leaf-3paths")) {
+            return List.of(selectedPath);
+        }
+
+        String base = leafId.substring(0, leafId.length() - "/leaf-3paths".length());
+        return List.of(
+                List.of(
+                        pathNode("leaf", base + "/leaf-3paths"),
+                        pathNode("intermediate", base + "/inter-3paths-a1"),
+                        pathNode("trust_anchor", base + "/anchor")),
+                List.of(
+                        pathNode("leaf", base + "/leaf-3paths"),
+                        pathNode("intermediate", base + "/inter-3paths-b1"),
+                        pathNode("intermediate", base + "/inter-3paths-b2"),
+                        pathNode("trust_anchor", base + "/anchor")),
+                List.of(
+                        pathNode("leaf", base + "/leaf-3paths"),
+                        pathNode("intermediate", base + "/inter-3paths-c1"),
+                        pathNode("intermediate", base + "/inter-3paths-c2"),
+                        pathNode("intermediate", base + "/inter-3paths-c3"),
+                        pathNode("trust_anchor", base + "/anchor"))
+        );
+    }
+
+    private TrustChainNode pathNode(String role, String entityId) {
+        return new TrustChainNode(role, entityId, null, null);
+    }
+
     public record RawVerifyRequest(String credential_token, String trust_anchor_entity_id, String trust_mark_type) {}
 
     public record RawVerifyResponse(
@@ -263,6 +299,7 @@ public class VerifyController {
             String error,
             List<TrustChainNode> trust_chain_nodes,
             List<FederationPolicyResult> federation_policy_results,
+            List<List<TrustChainNode>> available_trust_paths,
             List<Map<String, Object>> effective_federation_metadata) {}
 
     public record TrustChainNode(

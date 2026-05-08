@@ -151,6 +151,10 @@ public class TestScenarioController {
             case "leaf-all-in" -> authorityHints("all-in-leaf", baseUrl + "/inter-all-in-1", 5);
             case "leaf-policy-value-conflict" -> List.of(baseUrl + "/inter-value-conflict");
             case "leaf-policy-2ints" -> List.of(baseUrl + "/inter-policy-a");
+            case "leaf-3paths" -> List.of(
+                    baseUrl + "/inter-3paths-a1",
+                    baseUrl + "/inter-3paths-b1",
+                    baseUrl + "/inter-3paths-c1");
             case "leaf-trustmark-delegated" -> List.of(baseUrl + "/intermediate");
             case "leaf-5hints" -> List.of(
                     baseUrl + "/nonexistent-h1", baseUrl + "/nonexistent-h2",
@@ -232,6 +236,16 @@ public class TestScenarioController {
                     baseUrl + "/inter-policy-a/fetch?sub=" + issuer,
                     baseUrl + "/inter-policy-b/fetch?sub=" + baseUrl + "/inter-policy-a",
                     baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-policy-b");
+            case "leaf-3paths" -> List.of(
+                    baseUrl + "/inter-3paths-a1/fetch?sub=" + issuer,
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-3paths-a1",
+                    baseUrl + "/inter-3paths-b1/fetch?sub=" + issuer,
+                    baseUrl + "/inter-3paths-b2/fetch?sub=" + baseUrl + "/inter-3paths-b1",
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-3paths-b2",
+                    baseUrl + "/inter-3paths-c1/fetch?sub=" + issuer,
+                    baseUrl + "/inter-3paths-c2/fetch?sub=" + baseUrl + "/inter-3paths-c1",
+                    baseUrl + "/inter-3paths-c3/fetch?sub=" + baseUrl + "/inter-3paths-c2",
+                    baseUrl + "/anchor/fetch?sub=" + baseUrl + "/inter-3paths-c3");
             case "leaf-trustmark-delegated" -> List.of(
                     baseUrl + "/intermediate/fetch?sub=" + issuer,
                     baseUrl + "/anchor/fetch?sub=" + baseUrl + "/intermediate");
@@ -282,6 +296,7 @@ public class TestScenarioController {
             case "leaf-all-in" -> "Diepe keten met metadata_policy plus credential checks: exp geldig, nbf geldig, credentialStatus niet revoked, trusted issuer/type en geldige signature.";
             case "leaf-policy-value-conflict" -> "Twee subordinate statements gebruiken value op openid_credential_issuer.token_endpoint_auth_method met verschillende waarden; volgens 6.1.3.1.1 moet dit een policy error zijn.";
             case "leaf-policy-2ints" -> "Leaf -> intermediate A -> intermediate B -> trust anchor; intermediate A en B bevatten beide raw metadata_policy en leveren effectieve federation metadata op.";
+            case "leaf-3paths" -> "Een leaf met drie geldige trust paths: via 1, 2 en 3 intermediates naar dezelfde trust anchor.";
             case "leaf-trustmark-delegated" -> "De intermediate draagt de Trust Mark; de mark bevat iss, sub, trust_mark_type en iat, met delegation JWT en trust_mark_owners in de trust anchor.";
             default -> null;
         };
@@ -402,7 +417,10 @@ public class TestScenarioController {
                         "Trust Mark staat op de intermediate en is uitgegeven met delegation JWT en owner in de trust anchor."),
                 new TestScenario(27, "Federation policies - twee intermediates", "policy", true,
                         "leaf-policy-2ints", "/anchor", "DiplomaCertificate",
-                        "Raw verify scenario met metadata_policy op intermediate A en B plus effectieve federation metadata.")
+                        "Raw verify scenario met metadata_policy op intermediate A en B plus effectieve federation metadata."),
+                new TestScenario(28, "Drie geldige trust paths - verschillende lengte", "authority", true,
+                        "leaf-3paths", "/anchor", "DiplomaCertificate",
+                        "Leaf heeft drie geldige paden naar dezelfde trust anchor: via 1, 2 en 3 intermediates.")
         );
     }
 

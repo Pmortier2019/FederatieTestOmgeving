@@ -543,6 +543,18 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
               </div>
             </div>
 
+            <div class="node role-leaf" id="node-leaf-3paths"
+                 data-slug="leaf-3paths" data-name="3 geldige paden" data-role="OP / Leaf" data-valid="true" data-scenario="28"
+                 onclick="selectNode('leaf-3paths')" onmouseenter="showTip(event,'leaf-3paths')" onmouseleave="hideTip()">
+              <div class="node-dot">---</div>
+              <div class="node-name">3 geldige paden</div>
+              <div class="node-ep" id="ep-leaf-3paths">/leaf-3paths/.well-known/openid-federation</div>
+              <div class="node-tags">
+                <span class="node-tag scenario">S28</span>
+                <span class="node-tag valid-true">verwacht: geldig</span>
+              </div>
+            </div>
+
             <div class="node role-leaf" id="node-leaf-trustmark-delegated"
                  data-slug="leaf-trustmark-delegated" data-name="Trust Mark op intermediate" data-role="OP / Leaf" data-valid="true" data-scenario="26"
                  onclick="selectNode('leaf-trustmark-delegated')" onmouseenter="showTip(event,'leaf-trustmark-delegated')" onmouseleave="hideTip()">
@@ -810,6 +822,7 @@ const ANCHOR_FOR = {
   'leaf-policy-jwks':    '/anchor',
   'leaf-policy-value-conflict': '/anchor',
   'leaf-policy-2ints':    '/anchor',
+  'leaf-3paths':          '/anchor',
   'leaf-trustmark-delegated': '/anchor',
   'leaf-policy-type-ok': '/anchor',
   'leaf-policy-jwks-ok': '/anchor',
@@ -837,6 +850,7 @@ const SCENARIO_ID = {
   'leaf-policy-jwks':    7,
   'leaf-policy-value-conflict': 25,
   'leaf-policy-2ints':    27,
+  'leaf-3paths':          28,
   'leaf-trustmark-delegated': 26,
   'leaf-multihint':      9,
   'leaf-nohint':         10,
@@ -871,6 +885,7 @@ const PARENTS = {
   'leaf-policy-jwks':    'intermediate',
   'leaf-policy-value-conflict': 'inter-value-conflict',
   'leaf-policy-2ints':    'inter-policy-a',
+  'leaf-3paths':          'inter-3paths-a1',
   'leaf-trustmark-delegated': 'intermediate',
   'leaf-deep':           'inter-depth-1',
   'leaf-maxpath':        'intermediate-maxpath',
@@ -894,6 +909,7 @@ const DEEP_CHAIN_INTERS = {
                    'inter-chain10-6','inter-chain10-7','inter-chain10-8','inter-chain10-9','inter-chain10-10'],
   'leaf-all-in':  ['inter-all-in-1','inter-all-in-2','inter-all-in-3','inter-all-in-4','inter-all-in-5',
                    'inter-all-in-6','inter-all-in-7','inter-all-in-8','inter-all-in-9','inter-all-in-10'],
+  'leaf-3paths':  ['inter-3paths-a1','inter-3paths-b1','inter-3paths-b2','inter-3paths-c1','inter-3paths-c2','inter-3paths-c3'],
   'leaf-deep':    ['inter-depth-1','inter-depth-2','inter-depth-3','inter-depth-4','inter-depth-5',
                    'inter-depth-6','inter-depth-7','inter-depth-8','inter-depth-9','inter-depth-10',
                    'inter-depth-11','inter-depth-12'],
@@ -912,6 +928,7 @@ const EDGES = [
   ['intermediate','leaf-policy-jwks'],
   ['inter-value-conflict','leaf-policy-value-conflict'],
   ['inter-policy-a','leaf-policy-2ints'],
+  ['inter-3paths-a1','leaf-3paths'],
   ['intermediate','leaf-trustmark-delegated'],
   ['intermediate','leaf-policy-type-ok'],
   ['intermediate','leaf-policy-jwks-ok'],
