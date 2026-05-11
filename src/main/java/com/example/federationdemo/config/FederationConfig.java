@@ -157,6 +157,7 @@ public class FederationConfig {
                         "trust_mark", delegatedTrustMark)),
                 "metadata", Map.of("federation_entity", Map.of(
                         "federation_fetch_endpoint", baseUrl + "/intermediate/fetch",
+                        "federation_trust_mark_status_endpoint", baseUrl + "/intermediate/federation/trust-mark-status",
                         "display_name", "Surf (demo)"))),
                 intermediateKey));
 

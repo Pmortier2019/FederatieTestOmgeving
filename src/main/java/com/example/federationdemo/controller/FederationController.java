@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,6 +23,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @Tag(name = "Federation", description = "OpenID Federation endpoints")
@@ -85,6 +88,40 @@ public class FederationController {
         }
         liveTracker.broadcast(buildHttpCallEvent(url, jwt));
         return ResponseEntity.ok().contentType(ENTITY_STATEMENT_JWT).body(jwt);
+    }
+
+    @Operation(summary = "Trust Mark status endpoint for demo Trust Mark issuers")
+    @GetMapping(value = "/{entity}/federation/trust-mark-status",
+                produces = "application/json")
+    public ResponseEntity<Map<String, Object>> getTrustMarkStatus(
+            @PathVariable String entity,
+            @RequestParam(name = "trust_mark", required = false) String trustMark) {
+        return trustMarkStatus(entity, trustMark);
+    }
+
+    @Operation(summary = "Trust Mark status endpoint for demo Trust Mark issuers")
+    @PostMapping(value = "/{entity}/federation/trust-mark-status",
+                 produces = "application/json")
+    public ResponseEntity<Map<String, Object>> postTrustMarkStatus(
+            @PathVariable String entity,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Object trustMark = body != null ? body.get("trust_mark") : null;
+        return trustMarkStatus(entity, trustMark instanceof String s ? s : null);
+    }
+
+    private ResponseEntity<Map<String, Object>> trustMarkStatus(String entity, String trustMark) {
+        String issuerEntityId = baseUrl + "/" + entity;
+        if (entityStore.getEntityConfig(entity) == null) {
+            return ResponseEntity.notFound().build();
+        }
+        liveTracker.broadcast(DemoEvent.httpCall(
+                issuerEntityId + "/federation/trust-mark-status",
+                200,
+                issuerEntityId,
+                issuerEntityId,
+                null,
+                null));
+        return ResponseEntity.ok(Map.of("active", true));
     }
 
     private DemoEvent buildHttpCallEvent(String url, String jwt) {
