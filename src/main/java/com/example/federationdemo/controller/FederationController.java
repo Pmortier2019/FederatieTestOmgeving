@@ -101,12 +101,12 @@ public class FederationController {
 
     @Operation(summary = "Trust Mark status endpoint for demo Trust Mark issuers")
     @PostMapping(value = "/{entity}/federation/trust-mark-status",
+                 consumes = MediaType.ALL_VALUE,
                  produces = "application/json")
     public ResponseEntity<Map<String, Object>> postTrustMarkStatus(
             @PathVariable String entity,
-            @RequestBody(required = false) Map<String, Object> body) {
-        Object trustMark = body != null ? body.get("trust_mark") : null;
-        return trustMarkStatus(entity, trustMark instanceof String s ? s : null);
+            @RequestBody(required = false) String body) {
+        return trustMarkStatus(entity, body);
     }
 
     private ResponseEntity<Map<String, Object>> trustMarkStatus(String entity, String trustMark) {
